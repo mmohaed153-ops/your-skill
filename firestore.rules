@@ -1,0 +1,1616 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global safety net: deny all access by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Global hardened primitive helpers
+    function isSignedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidStoredFileRef(f) {
+      return f is map
+        && f.keys().hasAll(['id', 'name', 'size', 'mimeType', 'extension', 'blobId', 'chunkCount'])
+        && f.keys().hasOnly(['id', 'name', 'size', 'mimeType', 'extension', 'blobId', 'chunkCount'])
+        && isValidId(f.id)
+        && f.name is string && f.name.size() >= 1 && f.name.size() <= 255
+        && f.size is int && f.size >= 0 && f.size <= 210000000
+        && f.mimeType is string && f.mimeType.size() <= 150
+        && f.extension is string && f.extension.size() <= 30
+        && isValidId(f.blobId)
+        && f.chunkCount is int && f.chunkCount >= 0 && f.chunkCount <= 320;
+    }
+
+    function isValidFileList(files) {
+      return files is list
+        && files.size() >= 1
+        && files.size() <= 100
+        && isValidStoredFileRef(files[0]);
+    }
+
+    function isValidLearningPath(data, userId, pathId) {
+      return data.keys().hasAll(['id', 'ownerId', 'title', 'description', 'coverImage', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'ownerId', 'title', 'description', 'coverImage', 'createdAt', 'updatedAt'])
+        && isValidId(data.id)
+        && data.id == pathId
+        && data.ownerId is string
+        && data.ownerId == userId
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 160
+        && data.description is string && data.description.size() <= 600
+        && data.coverImage is string && data.coverImage.size() <= 350000
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidVideoStep(data, userId, pathId, stepId) {
+      return data.keys().hasAll([
+          'id', 'pathId', 'ownerId', 'title', 'description',
+          'videoUrl', 'thumbnailUrl', 'order', 'completed',
+          'completedAt', 'targetDate', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'pathId', 'ownerId', 'title', 'description',
+          'videoUrl', 'thumbnailUrl', 'order', 'completed',
+          'completedAt', 'targetDate', 'quickNotes', 'quickNotesUpdatedAt',
+          'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && data.id == stepId
+        && isValidId(data.pathId)
+        && data.pathId == pathId
+        && data.ownerId is string
+        && data.ownerId == userId
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 180
+        && data.description is string && data.description.size() <= 1000
+        && data.videoUrl is string && data.videoUrl.size() >= 1 && data.videoUrl.size() <= 2048
+        && data.thumbnailUrl is string && data.thumbnailUrl.size() <= 350000
+        && data.order is int && data.order >= 0 && data.order <= 5000
+        && data.completed is bool
+        && data.completedAt is string && data.completedAt.size() <= 64
+        && data.targetDate is string && data.targetDate.size() <= 40
+        && (!('quickNotes' in data) || (data.quickNotes is string && data.quickNotes.size() <= 3000))
+        && (!('quickNotesUpdatedAt' in data) || (data.quickNotesUpdatedAt is string && data.quickNotesUpdatedAt.size() <= 64))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidVaultProject(data, userId, projectId) {
+      return data.keys().hasAll([
+          'id', 'ownerId', 'name', 'description', 'folder',
+          'fileType', 'previewImage', 'latestVersionNumber',
+          'latestBackupAt', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'ownerId', 'name', 'description', 'folder',
+          'fileType', 'previewImage', 'latestVersionNumber',
+          'latestBackupAt', 'linkedJamId', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && data.id == projectId
+        && data.ownerId is string
+        && data.ownerId == userId
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 160
+        && data.description is string && data.description.size() <= 1000
+        && data.folder is string && data.folder.size() >= 1 && data.folder.size() <= 80
+        && data.fileType is string && data.fileType.size() >= 1 && data.fileType.size() <= 60
+        && data.previewImage is string && data.previewImage.size() <= 350000
+        && data.latestVersionNumber is int && data.latestVersionNumber >= 1 && data.latestVersionNumber <= 5000
+        && data.latestBackupAt is string && data.latestBackupAt.size() <= 64
+        && (!('linkedJamId' in data) || (data.linkedJamId is string && data.linkedJamId.size() <= 128))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidVaultVersion(data, userId, projectId, versionId) {
+      return data.keys().hasAll([
+          'id', 'projectId', 'ownerId', 'versionNumber',
+          'versionLabel', 'notes', 'totalSizeBytes', 'files',
+          'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'projectId', 'ownerId', 'versionNumber',
+          'versionLabel', 'notes', 'totalSizeBytes', 'files',
+          'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && data.id == versionId
+        && isValidId(data.projectId)
+        && data.projectId == projectId
+        && data.ownerId is string
+        && data.ownerId == userId
+        && data.versionNumber is int && data.versionNumber >= 1 && data.versionNumber <= 5000
+        && data.versionLabel is string && data.versionLabel.size() >= 1 && data.versionLabel.size() <= 40
+        && data.notes is string && data.notes.size() <= 600
+        && data.totalSizeBytes is int && data.totalSizeBytes >= 0 && data.totalSizeBytes <= 1073741824
+        && isValidFileList(data.files)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidAssetCategory(category) {
+      return category in ['3d_model', 'material', 'texture', 'image', 'audio', 'animation', 'addon', 'game_asset', 'other'];
+    }
+
+    function isValidPbrMaterialSpec(spec) {
+      return spec is map
+        && spec.keys().hasAll(['colorHex', 'roughness', 'metalness', 'tiling'])
+        && spec.keys().hasOnly([
+          'colorHex', 'roughness', 'metalness', 'tiling',
+          'baseColorFileId', 'normalFileId', 'roughnessFileId',
+          'metallicFileId', 'heightFileId'
+        ])
+        && spec.colorHex is string && spec.colorHex.size() >= 4 && spec.colorHex.size() <= 16
+        && (spec.roughness is int || spec.roughness is float) && spec.roughness >= 0 && spec.roughness <= 1
+        && (spec.metalness is int || spec.metalness is float) && spec.metalness >= 0 && spec.metalness <= 1
+        && (spec.tiling is int || spec.tiling is float) && spec.tiling >= 0.1 && spec.tiling <= 64
+        && (!('baseColorFileId' in spec) || (spec.baseColorFileId is string && spec.baseColorFileId.size() <= 128))
+        && (!('normalFileId' in spec) || (spec.normalFileId is string && spec.normalFileId.size() <= 128))
+        && (!('roughnessFileId' in spec) || (spec.roughnessFileId is string && spec.roughnessFileId.size() <= 128))
+        && (!('metallicFileId' in spec) || (spec.metallicFileId is string && spec.metallicFileId.size() <= 128))
+        && (!('heightFileId' in spec) || (spec.heightFileId is string && spec.heightFileId.size() <= 128));
+    }
+
+    function isValidLibraryAsset(data, userId, assetId) {
+      return data.keys().hasAll([
+          'id', 'ownerId', 'name', 'description', 'category',
+          'folder', 'tags', 'previewImage', 'fileCount',
+          'totalSizeBytes', 'primaryExtension', 'files',
+          'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'ownerId', 'name', 'description', 'category',
+          'folder', 'tags', 'previewImage', 'fileCount',
+          'totalSizeBytes', 'primaryExtension', 'files', 'materialSpec',
+          'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && data.id == assetId
+        && data.ownerId is string
+        && data.ownerId == userId
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 160
+        && data.description is string && data.description.size() <= 1000
+        && data.category is string && isValidAssetCategory(data.category)
+        && data.folder is string && data.folder.size() >= 1 && data.folder.size() <= 80
+        && data.tags is list && data.tags.size() <= 15
+        && (data.tags.size() == 0 || (data.tags[0] is string && data.tags[0].size() <= 40))
+        && data.previewImage is string && data.previewImage.size() <= 350000
+        && data.fileCount is int && data.fileCount >= 1 && data.fileCount <= 100
+        && data.totalSizeBytes is int && data.totalSizeBytes >= 0 && data.totalSizeBytes <= 1073741824
+        && data.primaryExtension is string && data.primaryExtension.size() <= 30
+        && isValidFileList(data.files)
+        && (!('materialSpec' in data) || isValidPbrMaterialSpec(data.materialSpec))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidNoteLink(link) {
+      return link is map
+        && link.keys().hasAll(['type', 'targetId', 'parentId', 'label'])
+        && link.keys().hasOnly(['type', 'targetId', 'parentId', 'label'])
+        && link.type is string
+        && link.type in ['vault_project', 'library_asset', 'learning_step', 'learning_path', 'course', 'learning_board', 'game_jam', 'video_collection']
+        && isValidId(link.targetId)
+        && link.parentId is string && link.parentId.size() <= 128
+        && link.label is string && link.label.size() >= 1 && link.label.size() <= 200;
+    }
+
+    function isValidWorkspaceNote(data, userId, noteId) {
+      return data.keys().hasAll([
+          'id', 'ownerId', 'title', 'contentHtml', 'plainPreview',
+          'folder', 'tags', 'pinned', 'links', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'ownerId', 'title', 'contentHtml', 'plainPreview',
+          'folder', 'tags', 'pinned', 'links', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && data.id == noteId
+        && data.ownerId is string
+        && data.ownerId == userId
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 200
+        && data.contentHtml is string && data.contentHtml.size() <= 40000
+        && data.plainPreview is string && data.plainPreview.size() <= 400
+        && data.folder is string && data.folder.size() >= 1 && data.folder.size() <= 80
+        && data.tags is list && data.tags.size() <= 15
+        && (data.tags.size() == 0 || (data.tags[0] is string && data.tags[0].size() <= 40))
+        && data.pinned is bool
+        && data.links is list && data.links.size() <= 10
+        && (data.links.size() == 0 || isValidNoteLink(data.links[0]))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidStoredFileMeta(data, userId, blobId) {
+      return data.keys().hasAll(['id', 'ownerId', 'name', 'mimeType', 'size', 'chunkCount', 'createdAt'])
+        && data.keys().hasOnly(['id', 'ownerId', 'name', 'mimeType', 'size', 'chunkCount', 'createdAt'])
+        && isValidId(data.id)
+        && data.id == blobId
+        && data.ownerId is string
+        && data.ownerId == userId
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 255
+        && data.mimeType is string && data.mimeType.size() <= 150
+        && data.size is int && data.size >= 0 && data.size <= 210000000
+        && data.chunkCount is int && data.chunkCount >= 1 && data.chunkCount <= 320
+        && data.createdAt is timestamp;
+    }
+
+    function isValidStoredFileChunk(data, userId, blobId, chunkId) {
+      return data.keys().hasAll(['id', 'blobId', 'ownerId', 'index', 'dataBase64', 'createdAt'])
+        && data.keys().hasOnly(['id', 'blobId', 'ownerId', 'index', 'dataBase64', 'createdAt'])
+        && isValidId(data.id)
+        && data.id == chunkId
+        && isValidId(data.blobId)
+        && data.blobId == blobId
+        && data.ownerId is string
+        && data.ownerId == userId
+        && data.index is int && data.index >= 0 && data.index <= 320
+        && data.dataBase64 is string && data.dataBase64.size() <= 960000
+        && data.createdAt is timestamp;
+    }
+
+    function isValidTodoLink(link) {
+      return link is map
+        && link.keys().hasAll(['type', 'targetId', 'parentId', 'label'])
+        && link.keys().hasOnly(['type', 'targetId', 'parentId', 'label'])
+        && link.type is string
+        && link.type in ['none', 'project', 'learning_path', 'learning_step', 'course', 'asset', 'creative', 'learning_board', 'game_jam', 'video_collection']
+        && link.targetId is string && link.targetId.size() <= 128
+        && link.parentId is string && link.parentId.size() <= 128
+        && link.label is string && link.label.size() <= 200;
+    }
+
+    function isValidTodoTask(data, userId, todoId) {
+      return data.keys().hasAll([
+          'id', 'ownerId', 'title', 'description', 'priority',
+          'dueDate', 'completed', 'completedAt', 'link', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'ownerId', 'title', 'description', 'priority',
+          'dueDate', 'completed', 'completedAt', 'link', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && data.id == todoId
+        && data.ownerId is string
+        && data.ownerId == userId
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 200
+        && data.description is string && data.description.size() <= 1200
+        && data.priority is string && data.priority in ['high', 'medium', 'low']
+        && data.dueDate is string && data.dueDate.size() <= 40
+        && data.completed is bool
+        && data.completedAt is string && data.completedAt.size() <= 64
+        && isValidTodoLink(data.link)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidCourseVideo(v) {
+      return v is map
+        && v.keys().hasAll(['id', 'title', 'videoUrl', 'duration'])
+        && v.keys().hasOnly(['id', 'title', 'videoUrl', 'duration'])
+        && isValidId(v.id)
+        && v.title is string && v.title.size() >= 1 && v.title.size() <= 200
+        && v.videoUrl is string && v.videoUrl.size() >= 1 && v.videoUrl.size() <= 2048
+        && v.duration is string && v.duration.size() <= 40;
+    }
+
+    function isValidCourseItem(data, userId, courseId) {
+      return data.keys().hasAll([
+          'id', 'ownerId', 'title', 'url', 'thumbnailUrl', 'description',
+          'platform', 'category', 'status', 'progressPercent', 'linkedPathId',
+          'videos', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'ownerId', 'title', 'url', 'thumbnailUrl', 'description',
+          'platform', 'category', 'status', 'progressPercent', 'linkedPathId',
+          'videos', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && data.id == courseId
+        && data.ownerId is string
+        && data.ownerId == userId
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 200
+        && data.url is string && data.url.size() >= 1 && data.url.size() <= 2048
+        && data.thumbnailUrl is string && data.thumbnailUrl.size() <= 350000
+        && data.description is string && data.description.size() <= 1500
+        && data.platform is string && data.platform.size() <= 120
+        && data.category is string && data.category.size() <= 80
+        && data.status is string && data.status in ['active', 'completed', 'wishlist']
+        && data.progressPercent is int && data.progressPercent >= 0 && data.progressPercent <= 100
+        && data.linkedPathId is string && data.linkedPathId.size() <= 128
+        && data.videos is list && data.videos.size() <= 60
+        && (data.videos.size() == 0 || isValidCourseVideo(data.videos[0]))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidBoardCard(c) {
+      return c is map
+        && c.keys().hasAll([
+          'id', 'kind', 'x', 'y', 'width', 'title', 'sourceLabel',
+          'videoUrl', 'thumbnailUrl', 'completed', 'noteText', 'noteExpanded',
+          'linkedNoteId', 'sourceRefType', 'sourceRefId', 'sourceParentId',
+          'attachedToCardId', 'accentColor'
+        ])
+        && c.keys().hasOnly([
+          'id', 'kind', 'x', 'y', 'width', 'title', 'sourceLabel',
+          'videoUrl', 'thumbnailUrl', 'completed', 'noteText', 'noteExpanded',
+          'linkedNoteId', 'sourceRefType', 'sourceRefId', 'sourceParentId',
+          'attachedToCardId', 'accentColor',
+          'height', 'rotation', 'zIndex', 'originalFileRef'
+        ])
+        && isValidId(c.id)
+        && c.kind is string && c.kind in ['video', 'todo_widget', 'idea_note', 'image']
+        && (c.x is int || c.x is float) && c.x >= -20000 && c.x <= 20000
+        && (c.y is int || c.y is float) && c.y >= -20000 && c.y <= 20000
+        && (c.width is int || c.width is float) && c.width >= 120 && c.width <= 1000
+        && (!('height' in c) || ((c.height is int || c.height is float) && c.height >= 100 && c.height <= 1000))
+        && (!('rotation' in c) || ((c.rotation is int || c.rotation is float) && c.rotation >= -360 && c.rotation <= 360))
+        && (!('zIndex' in c) || (c.zIndex is int && c.zIndex >= 0 && c.zIndex <= 10000))
+        && (!('originalFileRef' in c) || isValidStoredFileRef(c.originalFileRef))
+        && c.title is string && c.title.size() >= 1 && c.title.size() <= 200
+        && c.sourceLabel is string && c.sourceLabel.size() <= 140
+        && c.videoUrl is string && c.videoUrl.size() <= 2048
+        && c.thumbnailUrl is string && c.thumbnailUrl.size() <= 350000
+        && c.completed is bool
+        && c.noteText is string && c.noteText.size() <= 4000
+        && c.noteExpanded is bool
+        && c.linkedNoteId is string && c.linkedNoteId.size() <= 128
+        && c.sourceRefType is string && c.sourceRefType in ['url', 'course', 'learning_step', 'game_jam', 'video_collection', 'none']
+        && c.sourceRefId is string && c.sourceRefId.size() <= 128
+        && c.sourceParentId is string && c.sourceParentId.size() <= 128
+        && c.attachedToCardId is string && c.attachedToCardId.size() <= 128
+        && c.accentColor is string && c.accentColor in ['crimson', 'navy', 'emerald', 'amber'];
+    }
+
+    function isValidBoardConnection(conn) {
+      return conn is map
+        && conn.keys().hasAll(['id', 'fromCardId', 'toCardId', 'label', 'color'])
+        && conn.keys().hasOnly(['id', 'fromCardId', 'toCardId', 'label', 'color'])
+        && isValidId(conn.id)
+        && isValidId(conn.fromCardId)
+        && isValidId(conn.toCardId)
+        && conn.label is string && conn.label.size() <= 120
+        && conn.color is string && conn.color in ['crimson', 'navy', 'emerald', 'amber'];
+    }
+
+    function isValidDrawingStroke(s) {
+      return s is map
+        && s.keys().hasAll(['id', 'tool', 'color', 'size', 'opacity', 'points'])
+        && s.keys().hasOnly(['id', 'tool', 'color', 'size', 'opacity', 'points'])
+        && isValidId(s.id)
+        && s.tool is string && s.tool in ['pen', 'highlighter']
+        && s.color is string && s.color.size() >= 4 && s.color.size() <= 16
+        && (s.size is int || s.size is float) && s.size >= 1 && s.size <= 64
+        && (s.opacity is int || s.opacity is float) && s.opacity >= 0.05 && s.opacity <= 1
+        && s.points is list && s.points.size() >= 1 && s.points.size() <= 300
+        && s.points[0] is map
+        && s.points[0].keys().hasAll(['x', 'y'])
+        && s.points[0].keys().hasOnly(['x', 'y'])
+        && (s.points[0].x is int || s.points[0].x is float)
+        && (s.points[0].y is int || s.points[0].y is float);
+    }
+
+    function isValidBoardViewport(vp) {
+      return vp is map
+        && vp.keys().hasAll(['panX', 'panY', 'zoom'])
+        && vp.keys().hasOnly(['panX', 'panY', 'zoom'])
+        && (vp.panX is int || vp.panX is float)
+        && (vp.panY is int || vp.panY is float)
+        && (vp.zoom is int || vp.zoom is float) && vp.zoom >= 0.25 && vp.zoom <= 2.5;
+    }
+
+    function isValidLearningBoard(data, userId, boardId) {
+      return data.keys().hasAll([
+          'id', 'ownerId', 'title', 'description', 'cards',
+          'connections', 'viewport', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'ownerId', 'title', 'description', 'cards',
+          'connections', 'drawings', 'viewport', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && data.id == boardId
+        && data.ownerId is string
+        && data.ownerId == userId
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 160
+        && data.description is string && data.description.size() <= 600
+        && data.cards is list && data.cards.size() <= 80
+        && (data.cards.size() == 0 || isValidBoardCard(data.cards[0]))
+        && data.connections is list && data.connections.size() <= 150
+        && (data.connections.size() == 0 || isValidBoardConnection(data.connections[0]))
+        && (!('drawings' in data) || (
+          data.drawings is list && data.drawings.size() <= 250
+          && (data.drawings.size() == 0 || isValidDrawingStroke(data.drawings[0]))
+        ))
+        && isValidBoardViewport(data.viewport)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidJamResource(res) {
+      return res is map
+        && res.keys().hasAll(['id', 'title', 'url'])
+        && res.keys().hasOnly(['id', 'title', 'url'])
+        && isValidId(res.id)
+        && res.title is string && res.title.size() >= 1 && res.title.size() <= 140
+        && res.url is string && res.url.size() >= 1 && res.url.size() <= 2048;
+    }
+
+    function isValidSavedGameJam(data, userId, jamId) {
+      return data.keys().hasAll([
+          'id', 'ownerId', 'name', 'description', 'startDate', 'endDate',
+          'status', 'mode', 'location', 'theme', 'platform', 'organizer',
+          'officialUrl', 'thumbnailUrl', 'personalNotes', 'linkedProjectId',
+          'linkedBoardId', 'resources', 'infoUpdatedAt', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'ownerId', 'name', 'description', 'startDate', 'endDate',
+          'status', 'mode', 'location', 'theme', 'platform', 'organizer',
+          'officialUrl', 'thumbnailUrl', 'personalNotes', 'linkedProjectId',
+          'linkedBoardId', 'resources', 'infoUpdatedAt', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && data.id == jamId
+        && data.ownerId is string
+        && data.ownerId == userId
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 200
+        && data.description is string && data.description.size() <= 2000
+        && data.startDate is string && data.startDate.size() <= 64
+        && data.endDate is string && data.endDate.size() <= 64
+        && data.status is string && data.status in ['upcoming', 'active', 'newly_announced', 'ended']
+        && data.mode is string && data.mode in ['online', 'in_person', 'hybrid']
+        && data.location is string && data.location.size() <= 160
+        && data.theme is string && data.theme.size() <= 200
+        && data.platform is string && data.platform.size() <= 120
+        && data.organizer is string && data.organizer.size() <= 160
+        && data.officialUrl is string && data.officialUrl.size() >= 1 && data.officialUrl.size() <= 2048
+        && data.thumbnailUrl is string && data.thumbnailUrl.size() <= 350000
+        && data.personalNotes is string && data.personalNotes.size() <= 5000
+        && data.linkedProjectId is string && data.linkedProjectId.size() <= 128
+        && data.linkedBoardId is string && data.linkedBoardId.size() <= 128
+        && data.resources is list && data.resources.size() <= 30
+        && (data.resources.size() == 0 || isValidJamResource(data.resources[0]))
+        && data.infoUpdatedAt is string && data.infoUpdatedAt.size() <= 64
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidOrganizedVideo(v) {
+      return v is map
+        && v.keys().hasAll([
+          'id', 'title', 'videoUrl', 'platformId', 'platformName',
+          'thumbnailUrl', 'description', 'notes', 'completed', 'tags',
+          'category', 'addedAt'
+        ])
+        && v.keys().hasOnly([
+          'id', 'title', 'videoUrl', 'platformId', 'platformName',
+          'thumbnailUrl', 'description', 'notes', 'completed', 'tags',
+          'category', 'addedAt'
+        ])
+        && isValidId(v.id)
+        && v.title is string && v.title.size() >= 1 && v.title.size() <= 200
+        && v.videoUrl is string && v.videoUrl.size() >= 1 && v.videoUrl.size() <= 2048
+        && v.platformId is string && v.platformId.size() >= 1 && v.platformId.size() <= 40
+        && v.platformName is string && v.platformName.size() >= 1 && v.platformName.size() <= 120
+        && v.thumbnailUrl is string && v.thumbnailUrl.size() <= 350000
+        && v.description is string && v.description.size() <= 1000
+        && v.notes is string && v.notes.size() <= 3000
+        && v.completed is bool
+        && v.tags is list && v.tags.size() <= 15
+        && (v.tags.size() == 0 || (v.tags[0] is string && v.tags[0].size() <= 40))
+        && v.category is string && v.category.size() <= 80
+        && v.addedAt is string && v.addedAt.size() <= 64;
+    }
+
+    function isValidVideoCollection(data, userId, collectionId) {
+      return data.keys().hasAll([
+          'id', 'ownerId', 'title', 'description', 'category',
+          'tags', 'coverImage', 'videos', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'ownerId', 'title', 'description', 'category',
+          'tags', 'coverImage', 'videos', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && data.id == collectionId
+        && data.ownerId is string
+        && data.ownerId == userId
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 180
+        && data.description is string && data.description.size() <= 1000
+        && data.category is string && data.category.size() >= 1 && data.category.size() <= 80
+        && data.tags is list && data.tags.size() <= 15
+        && (data.tags.size() == 0 || (data.tags[0] is string && data.tags[0].size() <= 40))
+        && data.coverImage is string && data.coverImage.size() <= 350000
+        && data.videos is list && data.videos.size() <= 60
+        && (data.videos.size() == 0 || isValidOrganizedVideo(data.videos[0]))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidCalendarEvent(data, userId, eventId) {
+      return data.keys().hasAll([
+          'id', 'ownerId', 'title', 'description', 'date', 'startTime', 'endTime',
+          'category', 'colorHex', 'reminderMinutes', 'reminderEnabled', 'completed',
+          'linkedType', 'linkedId', 'linkedParentId', 'linkedLabel', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'ownerId', 'title', 'description', 'date', 'startTime', 'endTime',
+          'category', 'colorHex', 'reminderMinutes', 'reminderEnabled', 'completed',
+          'linkedType', 'linkedId', 'linkedParentId', 'linkedLabel', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && data.id == eventId
+        && data.ownerId is string
+        && data.ownerId == userId
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 200
+        && data.description is string && data.description.size() <= 1500
+        && data.date is string && data.date.size() == 10 && data.date.matches('^\\d{4}-\\d{2}-\\d{2}$')
+        && data.startTime is string && data.startTime.size() <= 10
+        && data.endTime is string && data.endTime.size() <= 10
+        && data.category is string && data.category in ['study', 'course', 'game_jam', 'project', 'todo', 'board', 'personal']
+        && data.colorHex is string && data.colorHex.size() <= 16
+        && data.reminderMinutes is int && data.reminderMinutes >= -1 && data.reminderMinutes <= 10080
+        && data.reminderEnabled is bool
+        && data.completed is bool
+        && data.linkedType is string && data.linkedType in ['none', 'course', 'learning_path', 'learning_step', 'game_jam', 'project', 'todo', 'learning_board']
+        && data.linkedId is string && data.linkedId.size() <= 128
+        && data.linkedParentId is string && data.linkedParentId.size() <= 128
+        && data.linkedLabel is string && data.linkedLabel.size() <= 200
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidUserPublicProfile(data, userId) {
+      return data.keys().hasAll(['uid', 'username', 'usernameLower', 'displayName', 'bio', 'avatarLetter', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'username', 'usernameLower', 'displayName', 'bio', 'avatarLetter', 'updatedAt'])
+        && isValidId(data.uid)
+        && data.uid == userId
+        && data.username is string && data.username.size() >= 3 && data.username.size() <= 32
+        && data.usernameLower is string && data.usernameLower.size() >= 3 && data.usernameLower.size() <= 32
+        && data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 120
+        && data.bio is string && data.bio.size() <= 300
+        && data.avatarLetter is string && data.avatarLetter.size() >= 1 && data.avatarLetter.size() <= 4
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidUsernameClaim(data, usernameLower) {
+      return data.keys().hasAll(['usernameLower', 'username', 'ownerUid', 'displayName', 'updatedAt'])
+        && data.keys().hasOnly(['usernameLower', 'username', 'ownerUid', 'displayName', 'updatedAt'])
+        && data.usernameLower is string && data.usernameLower == usernameLower
+        && data.usernameLower.size() >= 3 && data.usernameLower.size() <= 32
+        && data.username is string && data.username.size() >= 3 && data.username.size() <= 32
+        && isValidId(data.ownerUid)
+        && data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 120
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidFriendContact(data, userId, friendId) {
+      return data.keys().hasAll(['id', 'ownerId', 'friendUid', 'username', 'displayName', 'addedAt'])
+        && data.keys().hasOnly(['id', 'ownerId', 'friendUid', 'username', 'displayName', 'addedAt'])
+        && isValidId(data.id)
+        && data.id == friendId
+        && data.ownerId is string && data.ownerId == userId
+        && isValidId(data.friendUid)
+        && data.username is string && data.username.size() >= 3 && data.username.size() <= 32
+        && data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 120
+        && data.addedAt is timestamp;
+    }
+
+    function isValidSharedItem(data, shareId) {
+      return data.keys().hasAll([
+          'id', 'ownerId', 'ownerUsername', 'ownerDisplayName',
+          'recipientUid', 'recipientUsername', 'itemType', 'itemId',
+          'itemTitle', 'itemSummary', 'itemThumbnail', 'role',
+          'shareCode', 'revoked', 'allowCopy', 'includePersonalNotes',
+          'payloadJson', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'ownerId', 'ownerUsername', 'ownerDisplayName',
+          'recipientUid', 'recipientUsername', 'itemType', 'itemId',
+          'itemTitle', 'itemSummary', 'itemThumbnail', 'role',
+          'shareCode', 'revoked', 'allowCopy', 'includePersonalNotes',
+          'payloadJson', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && data.id == shareId
+        && isValidId(data.ownerId)
+        && data.ownerUsername is string && data.ownerUsername.size() <= 40
+        && data.ownerDisplayName is string && data.ownerDisplayName.size() <= 120
+        && data.recipientUid is string && data.recipientUid.size() <= 128
+        && data.recipientUsername is string && data.recipientUsername.size() <= 40
+        && data.itemType is string && data.itemType in ['learning_path', 'course', 'saved_game_jam', 'vault_project', 'learning_board', 'note', 'library_asset', 'video_collection']
+        && data.itemId is string && data.itemId.size() >= 1 && data.itemId.size() <= 128
+        && data.itemTitle is string && data.itemTitle.size() >= 1 && data.itemTitle.size() <= 200
+        && data.itemSummary is string && data.itemSummary.size() <= 500
+        && data.itemThumbnail is string && data.itemThumbnail.size() <= 2048
+        && data.role is string && data.role in ['viewer', 'collaborator', 'owner']
+        && data.shareCode is string && data.shareCode.size() >= 6 && data.shareCode.size() <= 64
+        && data.revoked is bool
+        && data.allowCopy is bool
+        && data.includePersonalNotes is bool
+        && data.payloadJson is string && data.payloadJson.size() >= 2 && data.payloadJson.size() <= 200000
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    // Existing Video Learning Paths
+    match /users/{userId}/paths/{pathId} {
+      allow get: if isOwner(userId) && isValidId(pathId);
+      allow list: if isOwner(userId) && existing().ownerId == request.auth.uid;
+
+      allow create: if isOwner(userId)
+        && isValidId(pathId)
+        && isValidLearningPath(incoming(), userId, pathId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+
+      allow update: if isOwner(userId)
+        && isValidId(pathId)
+        && isValidLearningPath(incoming(), userId, pathId)
+        && incoming().id == existing().id
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'description', 'coverImage', 'updatedAt']);
+
+      allow delete: if isOwner(userId) && isValidId(pathId);
+
+      match /steps/{stepId} {
+        allow get: if isOwner(userId) && isValidId(pathId) && isValidId(stepId);
+        allow list: if isOwner(userId) && existing().ownerId == request.auth.uid;
+
+        allow create: if isOwner(userId)
+          && isValidId(pathId)
+          && isValidId(stepId)
+          && isValidVideoStep(incoming(), userId, pathId, stepId)
+          && existsAfter(/databases/$(database)/documents/users/$(userId)/paths/$(pathId))
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time;
+
+        allow update: if isOwner(userId)
+          && isValidId(pathId)
+          && isValidId(stepId)
+          && isValidVideoStep(incoming(), userId, pathId, stepId)
+          && incoming().id == existing().id
+          && incoming().pathId == existing().pathId
+          && incoming().ownerId == existing().ownerId
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && exists(/databases/$(database)/documents/users/$(userId)/paths/$(pathId))
+          && (
+            incoming().diff(existing()).affectedKeys().hasOnly(['title', 'description', 'videoUrl', 'thumbnailUrl', 'order', 'targetDate', 'updatedAt'])
+            || incoming().diff(existing()).affectedKeys().hasOnly(['completed', 'completedAt', 'updatedAt'])
+            || incoming().diff(existing()).affectedKeys().hasOnly(['order', 'updatedAt'])
+            || incoming().diff(existing()).affectedKeys().hasOnly(['quickNotes', 'quickNotesUpdatedAt', 'updatedAt'])
+          );
+
+        allow delete: if isOwner(userId) && isValidId(pathId) && isValidId(stepId);
+      }
+    }
+
+    // Project Vault & Backup Versions
+    match /users/{userId}/vaultProjects/{projectId} {
+      allow get: if isOwner(userId) && isValidId(projectId);
+      allow list: if isOwner(userId) && existing().ownerId == request.auth.uid;
+
+      allow create: if isOwner(userId)
+        && isValidId(projectId)
+        && isValidVaultProject(incoming(), userId, projectId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+
+      allow update: if isOwner(userId)
+        && isValidId(projectId)
+        && isValidVaultProject(incoming(), userId, projectId)
+        && incoming().id == existing().id
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          incoming().diff(existing()).affectedKeys().hasOnly(['name', 'description', 'folder', 'fileType', 'previewImage', 'linkedJamId', 'updatedAt'])
+          || incoming().diff(existing()).affectedKeys().hasOnly(['latestVersionNumber', 'latestBackupAt', 'fileType', 'updatedAt'])
+        );
+
+      allow delete: if isOwner(userId) && isValidId(projectId);
+
+      match /versions/{versionId} {
+        allow get: if isOwner(userId) && isValidId(projectId) && isValidId(versionId);
+        allow list: if isOwner(userId) && existing().ownerId == request.auth.uid;
+
+        allow create: if isOwner(userId)
+          && isValidId(projectId)
+          && isValidId(versionId)
+          && isValidVaultVersion(incoming(), userId, projectId, versionId)
+          && existsAfter(/databases/$(database)/documents/users/$(userId)/vaultProjects/$(projectId))
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time;
+
+        allow update: if isOwner(userId)
+          && isValidId(projectId)
+          && isValidId(versionId)
+          && isValidVaultVersion(incoming(), userId, projectId, versionId)
+          && incoming().id == existing().id
+          && incoming().projectId == existing().projectId
+          && incoming().ownerId == existing().ownerId
+          && incoming().versionNumber == existing().versionNumber
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && exists(/databases/$(database)/documents/users/$(userId)/vaultProjects/$(projectId))
+          && incoming().diff(existing()).affectedKeys().hasOnly(['versionLabel', 'notes', 'totalSizeBytes', 'files', 'updatedAt']);
+
+        allow delete: if isOwner(userId) && isValidId(projectId) && isValidId(versionId);
+      }
+    }
+
+    // Asset Library
+    match /users/{userId}/libraryAssets/{assetId} {
+      allow get: if isOwner(userId) && isValidId(assetId);
+      allow list: if isOwner(userId) && existing().ownerId == request.auth.uid;
+
+      allow create: if isOwner(userId)
+        && isValidId(assetId)
+        && isValidLibraryAsset(incoming(), userId, assetId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+
+      allow update: if isOwner(userId)
+        && isValidId(assetId)
+        && isValidLibraryAsset(incoming(), userId, assetId)
+        && incoming().id == existing().id
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          incoming().diff(existing()).affectedKeys().hasOnly(['name', 'description', 'category', 'folder', 'tags', 'previewImage', 'materialSpec', 'updatedAt'])
+          || incoming().diff(existing()).affectedKeys().hasOnly(['fileCount', 'totalSizeBytes', 'primaryExtension', 'files', 'updatedAt'])
+          || incoming().diff(existing()).affectedKeys().hasOnly(['name', 'description', 'category', 'folder', 'tags', 'previewImage', 'fileCount', 'totalSizeBytes', 'primaryExtension', 'files', 'materialSpec', 'updatedAt'])
+        );
+
+      allow delete: if isOwner(userId) && isValidId(assetId);
+    }
+
+    // Chunked File Blobs
+    match /users/{userId}/fileBlobs/{blobId} {
+      allow get: if isOwner(userId) && isValidId(blobId);
+      allow list: if isOwner(userId) && existing().ownerId == request.auth.uid;
+
+      allow create: if isOwner(userId)
+        && isValidId(blobId)
+        && isValidStoredFileMeta(incoming(), userId, blobId)
+        && incoming().createdAt == request.time;
+
+      allow update: if false;
+      allow delete: if isOwner(userId) && isValidId(blobId);
+
+      match /chunks/{chunkId} {
+        allow get: if isOwner(userId) && isValidId(blobId) && isValidId(chunkId);
+        allow list: if isOwner(userId) && existing().ownerId == request.auth.uid;
+
+        allow create: if isOwner(userId)
+          && isValidId(blobId)
+          && isValidId(chunkId)
+          && isValidStoredFileChunk(incoming(), userId, blobId, chunkId)
+          && existsAfter(/databases/$(database)/documents/users/$(userId)/fileBlobs/$(blobId))
+          && incoming().createdAt == request.time;
+
+        allow update: if false;
+        allow delete: if isOwner(userId) && isValidId(blobId) && isValidId(chunkId);
+      }
+    }
+
+    // Personal Workspace Notes
+    match /users/{userId}/notes/{noteId} {
+      allow get: if isOwner(userId) && isValidId(noteId);
+      allow list: if isOwner(userId) && existing().ownerId == request.auth.uid;
+
+      allow create: if isOwner(userId)
+        && isValidId(noteId)
+        && isValidWorkspaceNote(incoming(), userId, noteId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+
+      allow update: if isOwner(userId)
+        && isValidId(noteId)
+        && isValidWorkspaceNote(incoming(), userId, noteId)
+        && incoming().id == existing().id
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          incoming().diff(existing()).affectedKeys().hasOnly(['title', 'contentHtml', 'plainPreview', 'folder', 'tags', 'pinned', 'links', 'updatedAt'])
+          || incoming().diff(existing()).affectedKeys().hasOnly(['pinned', 'updatedAt'])
+        );
+
+      allow delete: if isOwner(userId) && isValidId(noteId);
+    }
+
+    // Personal To-Do List Tasks
+    match /users/{userId}/todos/{todoId} {
+      allow get: if isOwner(userId) && isValidId(todoId);
+      allow list: if isOwner(userId) && existing().ownerId == request.auth.uid;
+
+      allow create: if isOwner(userId)
+        && isValidId(todoId)
+        && isValidTodoTask(incoming(), userId, todoId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+
+      allow update: if isOwner(userId)
+        && isValidId(todoId)
+        && isValidTodoTask(incoming(), userId, todoId)
+        && incoming().id == existing().id
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          incoming().diff(existing()).affectedKeys().hasOnly(['title', 'description', 'priority', 'dueDate', 'completed', 'completedAt', 'link', 'updatedAt'])
+          || incoming().diff(existing()).affectedKeys().hasOnly(['completed', 'completedAt', 'updatedAt'])
+        );
+
+      allow delete: if isOwner(userId) && isValidId(todoId);
+    }
+
+    // My Courses Collection
+    match /users/{userId}/courses/{courseId} {
+      allow get: if isOwner(userId) && isValidId(courseId);
+      allow list: if isOwner(userId) && existing().ownerId == request.auth.uid;
+
+      allow create: if isOwner(userId)
+        && isValidId(courseId)
+        && isValidCourseItem(incoming(), userId, courseId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+
+      allow update: if isOwner(userId)
+        && isValidId(courseId)
+        && isValidCourseItem(incoming(), userId, courseId)
+        && incoming().id == existing().id
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          incoming().diff(existing()).affectedKeys().hasOnly(['title', 'url', 'thumbnailUrl', 'description', 'platform', 'category', 'status', 'progressPercent', 'linkedPathId', 'videos', 'updatedAt'])
+          || incoming().diff(existing()).affectedKeys().hasOnly(['progressPercent', 'status', 'updatedAt'])
+          || incoming().diff(existing()).affectedKeys().hasOnly(['linkedPathId', 'updatedAt'])
+          || incoming().diff(existing()).affectedKeys().hasOnly(['videos', 'updatedAt'])
+        );
+
+      allow delete: if isOwner(userId) && isValidId(courseId);
+    }
+
+    // Learning Board Canvases
+    match /users/{userId}/learningBoards/{boardId} {
+      allow get: if isOwner(userId) && isValidId(boardId);
+      allow list: if isOwner(userId) && existing().ownerId == request.auth.uid;
+
+      allow create: if isOwner(userId)
+        && isValidId(boardId)
+        && isValidLearningBoard(incoming(), userId, boardId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+
+      allow update: if isOwner(userId)
+        && isValidId(boardId)
+        && isValidLearningBoard(incoming(), userId, boardId)
+        && incoming().id == existing().id
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'description', 'cards', 'connections', 'drawings', 'viewport', 'updatedAt']);
+
+      allow delete: if isOwner(userId) && isValidId(boardId);
+    }
+
+    // Saved Game Jams
+    match /users/{userId}/savedGameJams/{jamId} {
+      allow get: if isOwner(userId) && isValidId(jamId);
+      allow list: if isOwner(userId) && existing().ownerId == request.auth.uid;
+
+      allow create: if isOwner(userId)
+        && isValidId(jamId)
+        && isValidSavedGameJam(incoming(), userId, jamId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+
+      allow update: if isOwner(userId)
+        && isValidId(jamId)
+        && isValidSavedGameJam(incoming(), userId, jamId)
+        && incoming().id == existing().id
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'name', 'description', 'startDate', 'endDate', 'status', 'mode',
+          'location', 'theme', 'platform', 'organizer', 'officialUrl', 'thumbnailUrl',
+          'personalNotes', 'linkedProjectId', 'linkedBoardId', 'resources',
+          'infoUpdatedAt', 'updatedAt'
+        ]);
+
+      allow delete: if isOwner(userId) && isValidId(jamId);
+    }
+
+    // Multi-Platform Video Collections
+    match /users/{userId}/videoCollections/{collectionId} {
+      allow get: if isOwner(userId) && isValidId(collectionId);
+      allow list: if isOwner(userId) && existing().ownerId == request.auth.uid;
+
+      allow create: if isOwner(userId)
+        && isValidId(collectionId)
+        && isValidVideoCollection(incoming(), userId, collectionId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+
+      allow update: if isOwner(userId)
+        && isValidId(collectionId)
+        && isValidVideoCollection(incoming(), userId, collectionId)
+        && incoming().id == existing().id
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'title', 'description', 'category', 'tags', 'coverImage', 'videos', 'updatedAt'
+        ]);
+
+      allow delete: if isOwner(userId) && isValidId(collectionId);
+    }
+
+    // Calendar Events & Reminders
+    match /users/{userId}/calendarEvents/{eventId} {
+      allow get: if isOwner(userId) && isValidId(eventId);
+      allow list: if isOwner(userId) && existing().ownerId == request.auth.uid;
+
+      allow create: if isOwner(userId)
+        && isValidId(eventId)
+        && isValidCalendarEvent(incoming(), userId, eventId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+
+      allow update: if isOwner(userId)
+        && isValidId(eventId)
+        && isValidCalendarEvent(incoming(), userId, eventId)
+        && incoming().id == existing().id
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'title', 'description', 'date', 'startTime', 'endTime',
+            'category', 'colorHex', 'reminderMinutes', 'reminderEnabled',
+            'completed', 'linkedType', 'linkedId', 'linkedParentId', 'linkedLabel', 'updatedAt'
+          ])
+          || incoming().diff(existing()).affectedKeys().hasOnly(['completed', 'updatedAt'])
+          || incoming().diff(existing()).affectedKeys().hasOnly(['date', 'startTime', 'endTime', 'updatedAt'])
+        );
+
+      allow delete: if isOwner(userId) && isValidId(eventId);
+    }
+
+    // Friends Directory (Owner-only)
+    match /users/{userId}/friends/{friendId} {
+      allow get: if isOwner(userId) && isValidId(friendId);
+      allow list: if isOwner(userId) && existing().ownerId == request.auth.uid;
+
+      allow create: if isOwner(userId)
+        && isValidId(friendId)
+        && isValidFriendContact(incoming(), userId, friendId)
+        && incoming().addedAt == request.time;
+
+      allow update: if isOwner(userId)
+        && isValidId(friendId)
+        && isValidFriendContact(incoming(), userId, friendId)
+        && incoming().id == existing().id
+        && incoming().ownerId == existing().ownerId
+        && incoming().addedAt == existing().addedAt;
+
+      allow delete: if isOwner(userId) && isValidId(friendId);
+    }
+
+    // Public Username Profiles (NO PII; exact lookup only, never listable)
+    match /publicProfiles/{userId} {
+      allow get: if isSignedIn() && isValidId(userId);
+      allow list: if false;
+
+      allow create: if isOwner(userId)
+        && isValidId(userId)
+        && isValidUserPublicProfile(incoming(), userId)
+        && incoming().updatedAt == request.time;
+
+      allow update: if isOwner(userId)
+        && isValidId(userId)
+        && isValidUserPublicProfile(incoming(), userId)
+        && incoming().uid == existing().uid
+        && incoming().updatedAt == request.time;
+
+      allow delete: if isOwner(userId) && isValidId(userId);
+    }
+
+    // Exact Username Lookup Index (NO PII; exact lookup only)
+    match /usernames/{usernameLower} {
+      allow get: if isSignedIn() && usernameLower.size() >= 3 && usernameLower.size() <= 32;
+      allow list: if false;
+
+      allow create: if isSignedIn()
+        && isValidUsernameClaim(incoming(), usernameLower)
+        && incoming().ownerUid == request.auth.uid
+        && incoming().updatedAt == request.time;
+
+      allow update: if isSignedIn()
+        && existing().ownerUid == request.auth.uid
+        && isValidUsernameClaim(incoming(), usernameLower)
+        && incoming().ownerUid == existing().ownerUid
+        && incoming().usernameLower == existing().usernameLower
+        && incoming().updatedAt == request.time;
+
+      allow delete: if isSignedIn() && existing().ownerUid == request.auth.uid;
+    }
+
+    // Scoped Social Shares & Invite Links
+    match /shares/{shareId} {
+      allow get: if isSignedIn()
+        && isValidId(shareId)
+        && (
+          existing().ownerId == request.auth.uid
+          || existing().recipientUid == request.auth.uid
+          || (existing().revoked == false && existing().shareCode.size() >= 6)
+        );
+
+      allow list: if isSignedIn()
+        && (
+          existing().ownerId == request.auth.uid
+          || existing().recipientUid == request.auth.uid
+        );
+
+      allow create: if isSignedIn()
+        && isValidId(shareId)
+        && isValidSharedItem(incoming(), shareId)
+        && incoming().ownerId == request.auth.uid
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+
+      allow update: if isSignedIn()
+        && isValidId(shareId)
+        && isValidSharedItem(incoming(), shareId)
+        && incoming().id == existing().id
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          (
+            existing().ownerId == request.auth.uid
+            && incoming().diff(existing()).affectedKeys().hasOnly([
+              'role', 'revoked', 'allowCopy', 'includePersonalNotes',
+              'recipientUid', 'recipientUsername', 'payloadJson',
+              'itemTitle', 'itemSummary', 'itemThumbnail', 'updatedAt'
+            ])
+          )
+          || (
+            existing().revoked == false
+            && existing().recipientUid == request.auth.uid
+            && existing().role in ['collaborator', 'owner']
+            && incoming().diff(existing()).affectedKeys().hasOnly([
+              'payloadJson', 'itemTitle', 'itemSummary', 'updatedAt'
+            ])
+          )
+        );
+
+      allow delete: if isSignedIn() && isValidId(shareId) && existing().ownerId == request.auth.uid;
+    }
+
+    // ==================== Learning Path Platform Extensions ====================
+
+    function isValidDateIso(s) {
+      return s is string && s.size() == 10 && s.matches('^\\d{4}-\\d{2}-\\d{2}$');
+    }
+
+    function isValidGamificationProfile(data, userId, docId) {
+      return data.keys().hasAll([
+          'id', 'ownerId', 'totalXp', 'weeklyXp', 'monthlyXp', 'weekKey', 'monthKey',
+          'level', 'currentStreak', 'longestStreak', 'lastActiveDate', 'unlockedBadgeIds',
+          'badgeUnlockedAt', 'totalVideosWatched', 'totalQuizzesPassed', 'totalReviewsCompleted', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'ownerId', 'totalXp', 'weeklyXp', 'monthlyXp', 'weekKey', 'monthKey',
+          'level', 'currentStreak', 'longestStreak', 'lastActiveDate', 'unlockedBadgeIds',
+          'badgeUnlockedAt', 'totalVideosWatched', 'totalQuizzesPassed', 'totalReviewsCompleted', 'updatedAt'
+        ])
+        && docId == 'profile'
+        && data.id == 'profile'
+        && data.ownerId is string && data.ownerId == userId
+        && data.totalXp is int && data.totalXp >= 0 && data.totalXp <= 10000000
+        && data.weeklyXp is int && data.weeklyXp >= 0 && data.weeklyXp <= 10000000
+        && data.monthlyXp is int && data.monthlyXp >= 0 && data.monthlyXp <= 10000000
+        && data.weekKey is string && data.weekKey.size() <= 16
+        && data.monthKey is string && data.monthKey.size() <= 16
+        && data.level is int && data.level >= 1 && data.level <= 99
+        && data.currentStreak is int && data.currentStreak >= 0 && data.currentStreak <= 10000
+        && data.longestStreak is int && data.longestStreak >= 0 && data.longestStreak <= 10000
+        && data.lastActiveDate is string && data.lastActiveDate.size() <= 16
+        && data.unlockedBadgeIds is list && data.unlockedBadgeIds.size() <= 50
+        && data.badgeUnlockedAt is map
+        && data.totalVideosWatched is int && data.totalVideosWatched >= 0
+        && data.totalQuizzesPassed is int && data.totalQuizzesPassed >= 0
+        && data.totalReviewsCompleted is int && data.totalReviewsCompleted >= 0
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidXpTransaction(data, userId, txId) {
+      return data.keys().hasAll([
+          'id', 'ownerId', 'rewardKey', 'actionKind', 'points', 'title',
+          'detail', 'relatedId', 'dateIso', 'createdAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'ownerId', 'rewardKey', 'actionKind', 'points', 'title',
+          'detail', 'relatedId', 'dateIso', 'createdAt'
+        ])
+        && isValidId(data.id) && data.id == txId
+        && data.ownerId is string && data.ownerId == userId
+        && isValidId(data.rewardKey) && data.rewardKey == txId
+        && data.actionKind is string
+        && data.actionKind in ['video_watch', 'lesson_complete', 'quiz_pass', 'todo_complete', 'project_complete', 'path_complete', 'badge_unlock', 'streak_milestone', 'review_mastery']
+        && data.points is int && data.points >= 1 && data.points <= 1000
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 180
+        && data.detail is string && data.detail.size() <= 320
+        && data.relatedId is string && data.relatedId.size() <= 128
+        && isValidDateIso(data.dateIso)
+        && data.createdAt is timestamp;
+    }
+
+    function isValidDailyActivity(data, userId, dateIso) {
+      return data.keys().hasAll([
+          'id', 'ownerId', 'dateIso', 'minutesLearned', 'videosWatched',
+          'lessonsCompleted', 'tasksCompleted', 'quizzesCompleted',
+          'reviewsCompleted', 'xpEarned', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'ownerId', 'dateIso', 'minutesLearned', 'videosWatched',
+          'lessonsCompleted', 'tasksCompleted', 'quizzesCompleted',
+          'reviewsCompleted', 'xpEarned', 'updatedAt'
+        ])
+        && isValidDateIso(dateIso)
+        && data.id == dateIso
+        && data.dateIso == dateIso
+        && data.ownerId is string && data.ownerId == userId
+        && data.minutesLearned is int && data.minutesLearned >= 0 && data.minutesLearned <= 14400
+        && data.videosWatched is int && data.videosWatched >= 0 && data.videosWatched <= 500
+        && data.lessonsCompleted is int && data.lessonsCompleted >= 0 && data.lessonsCompleted <= 500
+        && data.tasksCompleted is int && data.tasksCompleted >= 0 && data.tasksCompleted <= 500
+        && data.quizzesCompleted is int && data.quizzesCompleted >= 0 && data.quizzesCompleted <= 500
+        && data.reviewsCompleted is int && data.reviewsCompleted >= 0 && data.reviewsCompleted <= 1000
+        && data.xpEarned is int && data.xpEarned >= 0 && data.xpEarned <= 100000
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidSkillNode(data, userId, skillId) {
+      return data.keys().hasAll([
+          'id', 'ownerId', 'title', 'description', 'levelNumber', 'columnIndex',
+          'category', 'prerequisiteIds', 'linkedPathIds', 'linkedCourseIds',
+          'linkedProjectIds', 'xpReward', 'isCustom', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'ownerId', 'title', 'description', 'levelNumber', 'columnIndex',
+          'category', 'prerequisiteIds', 'linkedPathIds', 'linkedCourseIds',
+          'linkedProjectIds', 'xpReward', 'isCustom', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id) && data.id == skillId
+        && data.ownerId is string && data.ownerId == userId
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 160
+        && data.description is string && data.description.size() <= 600
+        && data.levelNumber is int && data.levelNumber >= 1 && data.levelNumber <= 4
+        && data.columnIndex is int && data.columnIndex >= 0 && data.columnIndex <= 50
+        && data.category is string && data.category.size() >= 1 && data.category.size() <= 80
+        && data.prerequisiteIds is list && data.prerequisiteIds.size() <= 20
+        && data.linkedPathIds is list && data.linkedPathIds.size() <= 20
+        && data.linkedCourseIds is list && data.linkedCourseIds.size() <= 20
+        && data.linkedProjectIds is list && data.linkedProjectIds.size() <= 20
+        && data.xpReward is int && data.xpReward >= 0 && data.xpReward <= 1000
+        && data.isCustom is bool
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidQuizQuestion(q) {
+      return q is map
+        && q.keys().hasAll(['id', 'type', 'prompt', 'options', 'correctIndex', 'explanation'])
+        && q.keys().hasOnly(['id', 'type', 'prompt', 'options', 'correctIndex', 'explanation'])
+        && isValidId(q.id)
+        && q.type is string && q.type in ['multiple_choice', 'true_false']
+        && q.prompt is string && q.prompt.size() >= 1 && q.prompt.size() <= 420
+        && q.options is list && q.options.size() >= 2 && q.options.size() <= 6
+        && q.correctIndex is int && q.correctIndex >= 0 && q.correctIndex < q.options.size()
+        && q.explanation is string && q.explanation.size() <= 520;
+    }
+
+    function isValidLessonQuiz(data, userId, quizId) {
+      return data.keys().hasAll([
+          'id', 'ownerId', 'stepId', 'pathId', 'stepTitle', 'title',
+          'passPercent', 'source', 'questions', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'ownerId', 'stepId', 'pathId', 'stepTitle', 'title',
+          'passPercent', 'source', 'questions', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id) && data.id == quizId
+        && data.ownerId is string && data.ownerId == userId
+        && data.stepId is string && data.stepId.size() >= 1 && data.stepId.size() <= 128
+        && data.pathId is string && data.pathId.size() <= 128
+        && data.stepTitle is string && data.stepTitle.size() <= 200
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 200
+        && data.passPercent is int && data.passPercent >= 1 && data.passPercent <= 100
+        && data.source is string && data.source in ['ai', 'manual']
+        && data.questions is list && data.questions.size() >= 1 && data.questions.size() <= 30
+        && isValidQuizQuestion(data.questions[0])
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidQuizAttempt(data, userId, attemptId) {
+      return data.keys().hasAll([
+          'id', 'ownerId', 'quizId', 'stepId', 'pathId', 'stepTitle', 'quizTitle',
+          'score', 'totalQuestions', 'percentage', 'passed', 'results', 'createdAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'ownerId', 'quizId', 'stepId', 'pathId', 'stepTitle', 'quizTitle',
+          'score', 'totalQuestions', 'percentage', 'passed', 'results', 'createdAt'
+        ])
+        && isValidId(data.id) && data.id == attemptId
+        && data.ownerId is string && data.ownerId == userId
+        && isValidId(data.quizId)
+        && data.stepId is string && data.stepId.size() <= 128
+        && data.pathId is string && data.pathId.size() <= 128
+        && data.stepTitle is string && data.stepTitle.size() <= 200
+        && data.quizTitle is string && data.quizTitle.size() <= 200
+        && data.score is int && data.score >= 0 && data.score <= 100
+        && data.totalQuestions is int && data.totalQuestions >= 1 && data.totalQuestions <= 100
+        && data.percentage is int && data.percentage >= 0 && data.percentage <= 100
+        && data.passed is bool
+        && data.results is list && data.results.size() >= 1 && data.results.size() <= 30
+        && data.createdAt is timestamp;
+    }
+
+    function isValidReviewItem(data, userId, reviewId) {
+      return data.keys().hasAll([
+          'id', 'ownerId', 'questionId', 'quizId', 'stepId', 'pathId', 'stepTitle',
+          'prompt', 'options', 'correctIndex', 'explanation', 'wrongCount', 'correctCount',
+          'mastered', 'lastWrongAt', 'lastReviewedAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'ownerId', 'questionId', 'quizId', 'stepId', 'pathId', 'stepTitle',
+          'prompt', 'options', 'correctIndex', 'explanation', 'wrongCount', 'correctCount',
+          'mastered', 'lastWrongAt', 'lastReviewedAt', 'updatedAt'
+        ])
+        && isValidId(data.id) && data.id == reviewId
+        && data.ownerId is string && data.ownerId == userId
+        && data.questionId is string && data.questionId.size() >= 1 && data.questionId.size() <= 128
+        && data.quizId is string && data.quizId.size() <= 128
+        && data.stepId is string && data.stepId.size() <= 128
+        && data.pathId is string && data.pathId.size() <= 128
+        && data.stepTitle is string && data.stepTitle.size() <= 200
+        && data.prompt is string && data.prompt.size() >= 1 && data.prompt.size() <= 420
+        && data.options is list && data.options.size() >= 2 && data.options.size() <= 6
+        && data.correctIndex is int && data.correctIndex >= 0 && data.correctIndex < data.options.size()
+        && data.explanation is string && data.explanation.size() <= 520
+        && data.wrongCount is int && data.wrongCount >= 1 && data.wrongCount <= 1000
+        && data.correctCount is int && data.correctCount >= 0 && data.correctCount <= 1000
+        && data.mastered is bool
+        && data.lastWrongAt is string && data.lastWrongAt.size() <= 64
+        && data.lastReviewedAt is string && data.lastReviewedAt.size() <= 64
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidCertificateRecord(data, userId, certId) {
+      return data.keys().hasAll([
+          'id', 'ownerId', 'pathId', 'pathTitle', 'recipientName',
+          'verificationCode', 'lessonsCount', 'totalHoursLabel', 'completedAt', 'issuedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'ownerId', 'pathId', 'pathTitle', 'recipientName',
+          'verificationCode', 'lessonsCount', 'totalHoursLabel', 'completedAt', 'issuedAt'
+        ])
+        && isValidId(data.id) && data.id == certId
+        && data.ownerId is string && data.ownerId == userId
+        && isValidId(data.pathId)
+        && data.pathTitle is string && data.pathTitle.size() >= 1 && data.pathTitle.size() <= 200
+        && data.recipientName is string && data.recipientName.size() >= 1 && data.recipientName.size() <= 140
+        && isValidId(data.verificationCode)
+        && data.lessonsCount is int && data.lessonsCount >= 1 && data.lessonsCount <= 5000
+        && data.totalHoursLabel is string && data.totalHoursLabel.size() <= 60
+        && data.completedAt is string && data.completedAt.size() <= 32
+        && data.issuedAt is timestamp;
+    }
+
+    function isValidFavoriteItem(data, userId, favId) {
+      return data.keys().hasAll([
+          'id', 'ownerId', 'targetType', 'targetId', 'parentId',
+          'title', 'subtitle', 'url', 'thumbnailUrl', 'createdAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'ownerId', 'targetType', 'targetId', 'parentId',
+          'title', 'subtitle', 'url', 'thumbnailUrl', 'createdAt'
+        ])
+        && isValidId(data.id) && data.id == favId
+        && data.ownerId is string && data.ownerId == userId
+        && data.targetType is string && data.targetType in ['video_step', 'learning_path', 'course', 'collection_video']
+        && data.targetId is string && data.targetId.size() >= 1 && data.targetId.size() <= 128
+        && data.parentId is string && data.parentId.size() <= 128
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 200
+        && data.subtitle is string && data.subtitle.size() <= 200
+        && data.url is string && data.url.size() <= 2048
+        && data.thumbnailUrl is string && data.thumbnailUrl.size() <= 350000
+        && data.createdAt is timestamp;
+    }
+
+    function isValidPracticalProject(data, userId, projectId) {
+      return data.keys().hasAll([
+          'id', 'ownerId', 'title', 'description', 'requirements', 'requiredSkills',
+          'linkedPathId', 'linkedPathTitle', 'status', 'stages', 'files', 'totalSizeBytes',
+          'projectUrl', 'xpReward', 'completedAt', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'ownerId', 'title', 'description', 'requirements', 'requiredSkills',
+          'linkedPathId', 'linkedPathTitle', 'status', 'stages', 'files', 'totalSizeBytes',
+          'projectUrl', 'xpReward', 'completedAt', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id) && data.id == projectId
+        && data.ownerId is string && data.ownerId == userId
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 180
+        && data.description is string && data.description.size() <= 1500
+        && data.requirements is string && data.requirements.size() <= 2000
+        && data.requiredSkills is list && data.requiredSkills.size() <= 20
+        && data.linkedPathId is string && data.linkedPathId.size() <= 128
+        && data.linkedPathTitle is string && data.linkedPathTitle.size() <= 180
+        && data.status is string && data.status in ['not_started', 'in_progress', 'completed']
+        && data.stages is list && data.stages.size() <= 30
+        && data.files is list && data.files.size() <= 100
+        && (data.files.size() == 0 || isValidStoredFileRef(data.files[0]))
+        && data.totalSizeBytes is int && data.totalSizeBytes >= 0 && data.totalSizeBytes <= 1073741824
+        && data.projectUrl is string && data.projectUrl.size() <= 2048
+        && data.xpReward is int && data.xpReward >= 0 && data.xpReward <= 1000
+        && data.completedAt is string && data.completedAt.size() <= 64
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidPlatformNotification(data, userId, notifId) {
+      return data.keys().hasAll([
+          'id', 'ownerId', 'kind', 'title', 'message', 'read', 'targetSection', 'createdAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'ownerId', 'kind', 'title', 'message', 'read', 'targetSection', 'createdAt'
+        ])
+        && isValidId(data.id) && data.id == notifId
+        && data.ownerId is string && data.ownerId == userId
+        && data.kind is string && data.kind in ['xp', 'level_up', 'badge', 'streak', 'quiz', 'project', 'certificate', 'leaderboard']
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 160
+        && data.message is string && data.message.size() <= 400
+        && data.read is bool
+        && data.targetSection is string && data.targetSection.size() <= 40
+        && data.createdAt is timestamp;
+    }
+
+    function isValidLeaderboardEntry(data, userId) {
+      return data.keys().hasAll([
+          'uid', 'displayName', 'username', 'avatarLetter', 'level', 'totalXp',
+          'weeklyXp', 'monthlyXp', 'weekKey', 'monthKey', 'currentStreak', 'badgesCount', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'uid', 'displayName', 'username', 'avatarLetter', 'level', 'totalXp',
+          'weeklyXp', 'monthlyXp', 'weekKey', 'monthKey', 'currentStreak', 'badgesCount', 'updatedAt'
+        ])
+        && isValidId(data.uid) && data.uid == userId
+        && data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 120
+        && data.username is string && data.username.size() <= 40
+        && data.avatarLetter is string && data.avatarLetter.size() >= 1 && data.avatarLetter.size() <= 4
+        && data.level is int && data.level >= 1 && data.level <= 99
+        && data.totalXp is int && data.totalXp >= 0 && data.totalXp <= 10000000
+        && data.weeklyXp is int && data.weeklyXp >= 0 && data.weeklyXp <= 10000000
+        && data.monthlyXp is int && data.monthlyXp >= 0 && data.monthlyXp <= 10000000
+        && data.weekKey is string && data.weekKey.size() <= 16
+        && data.monthKey is string && data.monthKey.size() <= 16
+        && data.currentStreak is int && data.currentStreak >= 0 && data.currentStreak <= 10000
+        && data.badgesCount is int && data.badgesCount >= 0 && data.badgesCount <= 100
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidCertificateVerification(data, code) {
+      return data.keys().hasAll([
+          'verificationCode', 'ownerId', 'recipientName', 'pathTitle',
+          'lessonsCount', 'completedAt', 'issuedAt'
+        ])
+        && data.keys().hasOnly([
+          'verificationCode', 'ownerId', 'recipientName', 'pathTitle',
+          'lessonsCount', 'completedAt', 'issuedAt'
+        ])
+        && isValidId(data.verificationCode) && data.verificationCode == code
+        && isValidId(data.ownerId)
+        && data.recipientName is string && data.recipientName.size() >= 1 && data.recipientName.size() <= 140
+        && data.pathTitle is string && data.pathTitle.size() >= 1 && data.pathTitle.size() <= 200
+        && data.lessonsCount is int && data.lessonsCount >= 1 && data.lessonsCount <= 5000
+        && data.completedAt is string && data.completedAt.size() <= 32
+        && data.issuedAt is timestamp;
+    }
+
+    match /users/{userId}/gamification/{docId} {
+      allow get: if isOwner(userId) && docId == 'profile';
+      allow list: if isOwner(userId) && existing().ownerId == request.auth.uid;
+      allow create, update: if isOwner(userId)
+        && isValidGamificationProfile(incoming(), userId, docId)
+        && incoming().updatedAt == request.time;
+      allow delete: if isOwner(userId) && docId == 'profile';
+    }
+
+    match /users/{userId}/xpTransactions/{txId} {
+      allow get: if isOwner(userId) && isValidId(txId);
+      allow list: if isOwner(userId) && existing().ownerId == request.auth.uid;
+      allow create: if isOwner(userId)
+        && isValidId(txId)
+        && isValidXpTransaction(incoming(), userId, txId)
+        && incoming().createdAt == request.time;
+      allow update, delete: if false;
+    }
+
+    match /users/{userId}/dailyActivities/{dateIso} {
+      allow get: if isOwner(userId) && isValidDateIso(dateIso);
+      allow list: if isOwner(userId) && existing().ownerId == request.auth.uid;
+      allow create, update: if isOwner(userId)
+        && isValidDailyActivity(incoming(), userId, dateIso)
+        && incoming().updatedAt == request.time;
+      allow delete: if isOwner(userId) && isValidDateIso(dateIso);
+    }
+
+    match /users/{userId}/skills/{skillId} {
+      allow get: if isOwner(userId) && isValidId(skillId);
+      allow list: if isOwner(userId) && existing().ownerId == request.auth.uid;
+      allow create: if isOwner(userId)
+        && isValidId(skillId)
+        && isValidSkillNode(incoming(), userId, skillId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isOwner(userId)
+        && isValidId(skillId)
+        && isValidSkillNode(incoming(), userId, skillId)
+        && incoming().id == existing().id
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time;
+      allow delete: if isOwner(userId) && isValidId(skillId);
+    }
+
+    match /users/{userId}/quizzes/{quizId} {
+      allow get: if isOwner(userId) && isValidId(quizId);
+      allow list: if isOwner(userId) && existing().ownerId == request.auth.uid;
+      allow create: if isOwner(userId)
+        && isValidId(quizId)
+        && isValidLessonQuiz(incoming(), userId, quizId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isOwner(userId)
+        && isValidId(quizId)
+        && isValidLessonQuiz(incoming(), userId, quizId)
+        && incoming().id == existing().id
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time;
+      allow delete: if isOwner(userId) && isValidId(quizId);
+    }
+
+    match /users/{userId}/quizAttempts/{attemptId} {
+      allow get: if isOwner(userId) && isValidId(attemptId);
+      allow list: if isOwner(userId) && existing().ownerId == request.auth.uid;
+      allow create: if isOwner(userId)
+        && isValidId(attemptId)
+        && isValidQuizAttempt(incoming(), userId, attemptId)
+        && incoming().createdAt == request.time;
+      allow update: if false;
+      allow delete: if isOwner(userId) && isValidId(attemptId);
+    }
+
+    match /users/{userId}/reviewItems/{reviewId} {
+      allow get: if isOwner(userId) && isValidId(reviewId);
+      allow list: if isOwner(userId) && existing().ownerId == request.auth.uid;
+      allow create, update: if isOwner(userId)
+        && isValidId(reviewId)
+        && isValidReviewItem(incoming(), userId, reviewId)
+        && incoming().updatedAt == request.time;
+      allow delete: if isOwner(userId) && isValidId(reviewId);
+    }
+
+    match /users/{userId}/certificates/{certId} {
+      allow get: if isOwner(userId) && isValidId(certId);
+      allow list: if isOwner(userId) && existing().ownerId == request.auth.uid;
+      allow create: if isOwner(userId)
+        && isValidId(certId)
+        && isValidCertificateRecord(incoming(), userId, certId)
+        && incoming().issuedAt == request.time;
+      allow update: if false;
+      allow delete: if isOwner(userId) && isValidId(certId);
+    }
+
+    match /users/{userId}/favorites/{favId} {
+      allow get: if isOwner(userId) && isValidId(favId);
+      allow list: if isOwner(userId) && existing().ownerId == request.auth.uid;
+      allow create: if isOwner(userId)
+        && isValidId(favId)
+        && isValidFavoriteItem(incoming(), userId, favId)
+        && incoming().createdAt == request.time;
+      allow update: if false;
+      allow delete: if isOwner(userId) && isValidId(favId);
+    }
+
+    match /users/{userId}/practicalProjects/{projectId} {
+      allow get: if isOwner(userId) && isValidId(projectId);
+      allow list: if isOwner(userId) && existing().ownerId == request.auth.uid;
+      allow create: if isOwner(userId)
+        && isValidId(projectId)
+        && isValidPracticalProject(incoming(), userId, projectId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isOwner(userId)
+        && isValidId(projectId)
+        && isValidPracticalProject(incoming(), userId, projectId)
+        && incoming().id == existing().id
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time;
+      allow delete: if isOwner(userId) && isValidId(projectId);
+    }
+
+    match /users/{userId}/notifications/{notifId} {
+      allow get: if isOwner(userId) && isValidId(notifId);
+      allow list: if isOwner(userId) && existing().ownerId == request.auth.uid;
+      allow create: if isOwner(userId)
+        && isValidId(notifId)
+        && isValidPlatformNotification(incoming(), userId, notifId)
+        && incoming().createdAt == request.time;
+      allow update: if isOwner(userId)
+        && isValidId(notifId)
+        && isValidPlatformNotification(incoming(), userId, notifId)
+        && incoming().id == existing().id
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().diff(existing()).affectedKeys().hasOnly(['read']);
+      allow delete: if isOwner(userId) && isValidId(notifId);
+    }
+
+    // Public Leaderboard (Strictly zero PII)
+    match /leaderboard/{userId} {
+      allow get, list: if isSignedIn();
+      allow create, update: if isOwner(userId)
+        && isValidId(userId)
+        && isValidLeaderboardEntry(incoming(), userId)
+        && incoming().updatedAt == request.time;
+      allow delete: if isOwner(userId) && isValidId(userId);
+    }
+
+    // Exact Certificate Verification Code Lookup (Strictly zero PII, non-listable)
+    match /certificateVerifications/{verificationCode} {
+      allow get: if isSignedIn() && isValidId(verificationCode);
+      allow list: if false;
+      allow create: if isSignedIn()
+        && isValidId(verificationCode)
+        && incoming().ownerId == request.auth.uid
+        && isValidCertificateVerification(incoming(), verificationCode)
+        && incoming().issuedAt == request.time;
+      allow update: if false;
+      allow delete: if isSignedIn() && existing().ownerId == request.auth.uid;
+    }
+  }
+}

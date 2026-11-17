@@ -1,0 +1,115 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  html {
+    font-family: "Cairo", "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    overflow-x: hidden;
+  }
+
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+  }
+}
+
+.bg-grid-paper {
+  background-color: #f1f5f9;
+  background-image:
+    linear-gradient(to right, rgba(6, 45, 76, 0.055) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(6, 45, 76, 0.055) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+.dark .bg-grid-paper {
+  background-color: #071220;
+  background-image:
+    linear-gradient(to right, rgba(56, 189, 248, 0.07) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(56, 189, 248, 0.07) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+.bg-hero-grid {
+  background-color: #f8fafc;
+  background-image:
+    linear-gradient(to right, rgba(6, 45, 76, 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(6, 45, 76, 0.045) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.dark .bg-hero-grid {
+  background-color: #0b1d32;
+  background-image:
+    linear-gradient(to right, rgba(56, 189, 248, 0.07) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(56, 189, 248, 0.07) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@keyframes masarPopIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-masar-pop {
+  animation: masarPopIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@media print {
+  header,
+  nav,
+  aside,
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #062d4c !important;
+  }
+
+  .print-certificate-sheet {
+    box-shadow: none !important;
+    margin: 0 auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    page-break-inside: avoid;
+    border-color: #062d4c !important;
+  }
+}
+

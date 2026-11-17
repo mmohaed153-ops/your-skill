@@ -1,0 +1,1160 @@
+{
+  "entities": {
+    "LearningPath": {
+      "title": "LearningPath",
+      "description": "A personalized video learning path created by a learner.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the learning path.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the user who owns this learning path.",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "title": {
+          "type": "string",
+          "description": "Arabic or English title of the learning path.",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "description": {
+          "type": "string",
+          "description": "Short summary describing the goal of the learning path.",
+          "maxLength": 600
+        },
+        "coverImage": {
+          "type": "string",
+          "description": "Cover image path, URL, or compressed data URL.",
+          "maxLength": 350000
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server last update timestamp."
+        }
+      },
+      "required": ["id", "ownerId", "title", "description", "coverImage", "createdAt", "updatedAt"]
+    },
+    "VideoStep": {
+      "title": "VideoStep",
+      "description": "An ordered video step inside a personalized learning path.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the video step.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "pathId": {
+          "type": "string",
+          "description": "Parent learning path identifier.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the path owner.",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "title": {
+          "type": "string",
+          "description": "Title of the video lesson.",
+          "minLength": 1,
+          "maxLength": 180
+        },
+        "description": {
+          "type": "string",
+          "description": "Short description or study notes for the video.",
+          "maxLength": 1000
+        },
+        "videoUrl": {
+          "type": "string",
+          "description": "Original video link (YouTube, Vimeo, or direct video URL).",
+          "minLength": 1,
+          "maxLength": 2048
+        },
+        "thumbnailUrl": {
+          "type": "string",
+          "description": "Thumbnail image path, URL, or compressed data URL.",
+          "maxLength": 350000
+        },
+        "order": {
+          "type": "integer",
+          "description": "Zero-based position of the video in the learning path."
+        },
+        "completed": {
+          "type": "boolean",
+          "description": "Whether the learner has marked this video step as completed."
+        },
+        "completedAt": {
+          "type": "string",
+          "description": "ISO timestamp when the step was completed, or empty string.",
+          "maxLength": 64
+        },
+        "targetDate": {
+          "type": "string",
+          "description": "Optional daily schedule or target date (YYYY-MM-DD).",
+          "maxLength": 40
+        },
+        "quickNotes": {
+          "type": "string",
+          "description": "Personal study quick notes saved by the learner inside the watch modal for this video step.",
+          "maxLength": 3000
+        },
+        "quickNotesUpdatedAt": {
+          "type": "string",
+          "description": "ISO timestamp when quick notes were last saved, or empty string.",
+          "maxLength": 64
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server last update timestamp."
+        }
+      },
+      "required": [
+        "id",
+        "pathId",
+        "ownerId",
+        "title",
+        "description",
+        "videoUrl",
+        "thumbnailUrl",
+        "order",
+        "completed",
+        "completedAt",
+        "targetDate",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "VaultProject": {
+      "title": "VaultProject",
+      "description": "A backed-up project protected in the user's Project Vault.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "folder": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "fileType": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 60
+        },
+        "previewImage": {
+          "type": "string",
+          "maxLength": 350000
+        },
+        "latestVersionNumber": {
+          "type": "integer"
+        },
+        "latestBackupAt": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "linkedJamId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "ownerId",
+        "name",
+        "description",
+        "folder",
+        "fileType",
+        "previewImage",
+        "latestVersionNumber",
+        "latestBackupAt",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "VaultVersion": {
+      "title": "VaultVersion",
+      "description": "A versioned snapshot backup belonging to a VaultProject.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "projectId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "versionNumber": {
+          "type": "integer"
+        },
+        "versionLabel": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 600
+        },
+        "totalSizeBytes": {
+          "type": "integer"
+        },
+        "files": {
+          "type": "array",
+          "description": "Attached project files metadata (bounded list up to 100)."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "projectId",
+        "ownerId",
+        "versionNumber",
+        "versionLabel",
+        "notes",
+        "totalSizeBytes",
+        "files",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "LibraryAsset": {
+      "title": "LibraryAsset",
+      "description": "A creative asset (3D model, texture, audio, animation, add-on, etc.) stored in Asset Library.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "category": {
+          "type": "string",
+          "enum": ["3d_model", "material", "texture", "image", "audio", "animation", "addon", "game_asset", "other"]
+        },
+        "folder": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "tags": {
+          "type": "array",
+          "description": "Searchable tags for the asset (up to 15)."
+        },
+        "previewImage": {
+          "type": "string",
+          "maxLength": 350000
+        },
+        "fileCount": {
+          "type": "integer"
+        },
+        "totalSizeBytes": {
+          "type": "integer"
+        },
+        "primaryExtension": {
+          "type": "string",
+          "maxLength": 30
+        },
+        "files": {
+          "type": "array",
+          "description": "Attached asset files metadata (1 to 100)."
+        },
+        "materialSpec": {
+          "type": "object",
+          "description": "Optional PBR material shader properties and texture map slot assignments."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "ownerId",
+        "name",
+        "description",
+        "category",
+        "folder",
+        "tags",
+        "previewImage",
+        "fileCount",
+        "totalSizeBytes",
+        "primaryExtension",
+        "files",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "StoredFileMeta": {
+      "title": "StoredFileMeta",
+      "description": "Cloud file metadata header linking chunked binary payloads to an authenticated user.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "mimeType": {
+          "type": "string",
+          "maxLength": 150
+        },
+        "size": {
+          "type": "integer"
+        },
+        "chunkCount": {
+          "type": "integer"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "ownerId", "name", "mimeType", "size", "chunkCount", "createdAt"]
+    },
+    "StoredFileChunk": {
+      "title": "StoredFileChunk",
+      "description": "Base64-encoded binary slice of a StoredFileMeta document (bounded well under 1MB).",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "blobId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "index": {
+          "type": "integer"
+        },
+        "dataBase64": {
+          "type": "string",
+          "maxLength": 960000
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "blobId", "ownerId", "index", "dataBase64", "createdAt"]
+    },
+    "WorkspaceNote": {
+      "title": "WorkspaceNote",
+      "description": "A rich personal note created in the Notes workspace, optionally linked to Vault projects, Library assets, or Learning steps.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "contentHtml": {
+          "type": "string",
+          "maxLength": 40000
+        },
+        "plainPreview": {
+          "type": "string",
+          "maxLength": 400
+        },
+        "folder": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "tags": {
+          "type": "array",
+          "description": "Searchable tags for the note (up to 15)."
+        },
+        "pinned": {
+          "type": "boolean"
+        },
+        "links": {
+          "type": "array",
+          "description": "Cross-references linking this note to Vault projects, Library assets, Learning paths/steps, or Courses (up to 10)."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "ownerId",
+        "title",
+        "contentHtml",
+        "plainPreview",
+        "folder",
+        "tags",
+        "pinned",
+        "links",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "TodoTask": {
+      "title": "TodoTask",
+      "description": "A personal task in the To-Do List optionally linked to a project, learning path/step, course, asset, or creative task.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_-]+$" },
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "description": { "type": "string", "maxLength": 1200 },
+        "priority": { "type": "string", "enum": ["high", "medium", "low"] },
+        "dueDate": { "type": "string", "maxLength": 40 },
+        "completed": { "type": "boolean" },
+        "completedAt": { "type": "string", "maxLength": 64 },
+        "link": { "type": "object" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "ownerId", "title", "description", "priority", "dueDate", "completed", "completedAt", "link", "createdAt", "updatedAt"]
+    },
+    "CourseItem": {
+      "title": "CourseItem",
+      "description": "A course saved in My Courses with link, thumbnail, platform, progress, and video list.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_-]+$" },
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "url": { "type": "string", "minLength": 1, "maxLength": 2048 },
+        "thumbnailUrl": { "type": "string", "maxLength": 350000 },
+        "description": { "type": "string", "maxLength": 1500 },
+        "platform": { "type": "string", "maxLength": 120 },
+        "category": { "type": "string", "maxLength": 80 },
+        "status": { "type": "string", "enum": ["active", "completed", "wishlist"] },
+        "progressPercent": { "type": "integer" },
+        "linkedPathId": { "type": "string", "maxLength": 128 },
+        "videos": { "type": "array" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "ownerId", "title", "url", "thumbnailUrl", "description", "platform", "category", "status", "progressPercent", "linkedPathId", "videos", "createdAt", "updatedAt"]
+    },
+    "LearningBoard": {
+      "title": "LearningBoard",
+      "description": "An interactive visual Learning Board canvas containing freely positioned video cards, uploaded image cards, notes, connected To-Do widgets, directional arrows, and freehand drawings.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_-]+$" },
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "title": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "description": { "type": "string", "maxLength": 600 },
+        "cards": {
+          "type": "array",
+          "description": "Positioned board cards (videos, uploaded images, to-do list widgets, and idea notes, up to 80)."
+        },
+        "connections": {
+          "type": "array",
+          "description": "Directional visual lines/arrows linking board cards (up to 150)."
+        },
+        "drawings": {
+          "type": "array",
+          "description": "Freehand pen and highlighter strokes rendered on the board (up to 250)."
+        },
+        "viewport": {
+          "type": "object",
+          "description": "Canvas pan and zoom state ({ panX, panY, zoom })."
+        },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "ownerId", "title", "description", "cards", "connections", "viewport", "createdAt", "updatedAt"]
+    },
+    "SavedGameJam": {
+      "title": "SavedGameJam",
+      "description": "A real Game Jam saved and tracked by an authenticated user with personal notes, resources, and project/board links.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_-]+$" },
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "name": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "description": { "type": "string", "maxLength": 2000 },
+        "startDate": { "type": "string", "maxLength": 64 },
+        "endDate": { "type": "string", "maxLength": 64 },
+        "status": { "type": "string", "enum": ["upcoming", "active", "newly_announced", "ended"] },
+        "mode": { "type": "string", "enum": ["online", "in_person", "hybrid"] },
+        "location": { "type": "string", "maxLength": 160 },
+        "theme": { "type": "string", "maxLength": 200 },
+        "platform": { "type": "string", "maxLength": 120 },
+        "organizer": { "type": "string", "maxLength": 160 },
+        "officialUrl": { "type": "string", "minLength": 1, "maxLength": 2048 },
+        "thumbnailUrl": { "type": "string", "maxLength": 350000 },
+        "personalNotes": { "type": "string", "maxLength": 5000 },
+        "linkedProjectId": { "type": "string", "maxLength": 128 },
+        "linkedBoardId": { "type": "string", "maxLength": 128 },
+        "resources": { "type": "array", "description": "Saved links & resources for this Game Jam (up to 30)." },
+        "infoUpdatedAt": { "type": "string", "maxLength": 64 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "id", "ownerId", "name", "description", "startDate", "endDate",
+        "status", "mode", "location", "theme", "platform", "organizer",
+        "officialUrl", "thumbnailUrl", "personalNotes", "linkedProjectId",
+        "linkedBoardId", "resources", "infoUpdatedAt", "createdAt", "updatedAt"
+      ]
+    },
+    "VideoCollection": {
+      "title": "VideoCollection",
+      "description": "A unified collection organizing multi-platform videos (YouTube, TikTok, Facebook, Vimeo, generic links) with notes, tags, and categories.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_-]+$" },
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "title": { "type": "string", "minLength": 1, "maxLength": 180 },
+        "description": { "type": "string", "maxLength": 1000 },
+        "category": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "tags": { "type": "array", "description": "Searchable tags for the collection (up to 15)." },
+        "coverImage": { "type": "string", "maxLength": 350000 },
+        "videos": { "type": "array", "description": "Organized multi-platform video entries (up to 60)." },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "id", "ownerId", "title", "description", "category",
+        "tags", "coverImage", "videos", "createdAt", "updatedAt"
+      ]
+    },
+    "CalendarEvent": {
+      "title": "CalendarEvent",
+      "description": "A scheduled event, learning session, Game Jam deadline, or project milestone in the user's Calendar.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_-]+$" },
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "description": { "type": "string", "maxLength": 1500 },
+        "date": { "type": "string", "minLength": 10, "maxLength": 10 },
+        "startTime": { "type": "string", "maxLength": 10 },
+        "endTime": { "type": "string", "maxLength": 10 },
+        "category": { "type": "string", "enum": ["study", "course", "game_jam", "project", "todo", "board", "personal"] },
+        "colorHex": { "type": "string", "maxLength": 16 },
+        "reminderMinutes": { "type": "integer" },
+        "reminderEnabled": { "type": "boolean" },
+        "completed": { "type": "boolean" },
+        "linkedType": { "type": "string", "enum": ["none", "course", "learning_path", "learning_step", "game_jam", "project", "todo", "learning_board"] },
+        "linkedId": { "type": "string", "maxLength": 128 },
+        "linkedParentId": { "type": "string", "maxLength": 128 },
+        "linkedLabel": { "type": "string", "maxLength": 200 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "id", "ownerId", "title", "description", "date", "startTime", "endTime",
+        "category", "colorHex", "reminderMinutes", "reminderEnabled", "completed",
+        "linkedType", "linkedId", "linkedParentId", "linkedLabel", "createdAt", "updatedAt"
+      ]
+    },
+    "UserPublicProfile": {
+      "title": "UserPublicProfile",
+      "description": "Public username handle and display profile without any PII (no email or phone).",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "username": { "type": "string", "minLength": 3, "maxLength": 32 },
+        "usernameLower": { "type": "string", "minLength": 3, "maxLength": 32 },
+        "displayName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "bio": { "type": "string", "maxLength": 300 },
+        "avatarLetter": { "type": "string", "maxLength": 4 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "username", "usernameLower", "displayName", "bio", "avatarLetter", "updatedAt"]
+    },
+    "UsernameClaim": {
+      "title": "UsernameClaim",
+      "description": "Exact lowercase username lookup index pointing to public profile UID (no PII).",
+      "type": "object",
+      "properties": {
+        "usernameLower": { "type": "string", "minLength": 3, "maxLength": 32 },
+        "username": { "type": "string", "minLength": 3, "maxLength": 32 },
+        "ownerUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "displayName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["usernameLower", "username", "ownerUid", "displayName", "updatedAt"]
+    },
+    "FriendContact": {
+      "title": "FriendContact",
+      "description": "A saved friend contact in a user's friend list.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "friendUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "username": { "type": "string", "minLength": 3, "maxLength": 32 },
+        "displayName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "addedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "ownerId", "friendUid", "username", "displayName", "addedAt"]
+    },
+    "SharedItem": {
+      "title": "SharedItem",
+      "description": "A scoped social share invitation and sanitized payload shared with friends or via invite link.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_-]+$" },
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "ownerUsername": { "type": "string", "maxLength": 40 },
+        "ownerDisplayName": { "type": "string", "maxLength": 120 },
+        "recipientUid": { "type": "string", "maxLength": 128 },
+        "recipientUsername": { "type": "string", "maxLength": 40 },
+        "itemType": {
+          "type": "string",
+          "enum": ["learning_path", "course", "saved_game_jam", "vault_project", "learning_board", "note", "library_asset", "video_collection"]
+        },
+        "itemId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "itemTitle": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "itemSummary": { "type": "string", "maxLength": 500 },
+        "itemThumbnail": { "type": "string", "maxLength": 2048 },
+        "role": { "type": "string", "enum": ["viewer", "collaborator", "owner"] },
+        "shareCode": { "type": "string", "minLength": 6, "maxLength": 64 },
+        "revoked": { "type": "boolean" },
+        "allowCopy": { "type": "boolean" },
+        "includePersonalNotes": { "type": "boolean" },
+        "payloadJson": { "type": "string", "maxLength": 200000 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "id", "ownerId", "ownerUsername", "ownerDisplayName", "recipientUid", "recipientUsername",
+        "itemType", "itemId", "itemTitle", "itemSummary", "itemThumbnail", "role",
+        "shareCode", "revoked", "allowCopy", "includePersonalNotes", "payloadJson", "createdAt", "updatedAt"
+      ]
+    },
+    "GamificationProfile": {
+      "title": "GamificationProfile",
+      "description": "User XP, Level, Streak counters, and unlocked Badge timestamps.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "totalXp": { "type": "integer" },
+        "weeklyXp": { "type": "integer" },
+        "monthlyXp": { "type": "integer" },
+        "weekKey": { "type": "string", "maxLength": 16 },
+        "monthKey": { "type": "string", "maxLength": 16 },
+        "level": { "type": "integer" },
+        "currentStreak": { "type": "integer" },
+        "longestStreak": { "type": "integer" },
+        "lastActiveDate": { "type": "string", "maxLength": 16 },
+        "unlockedBadgeIds": { "type": "array" },
+        "badgeUnlockedAt": { "type": "object" },
+        "totalVideosWatched": { "type": "integer" },
+        "totalQuizzesPassed": { "type": "integer" },
+        "totalReviewsCompleted": { "type": "integer" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "id", "ownerId", "totalXp", "weeklyXp", "monthlyXp", "weekKey", "monthKey",
+        "level", "currentStreak", "longestStreak", "lastActiveDate", "unlockedBadgeIds",
+        "badgeUnlockedAt", "totalVideosWatched", "totalQuizzesPassed", "totalReviewsCompleted", "updatedAt"
+      ]
+    },
+    "XpTransaction": {
+      "title": "XpTransaction",
+      "description": "Immutable idempotent XP award record keyed by deterministic rewardKey.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "rewardKey": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "actionKind": { "type": "string" },
+        "points": { "type": "integer" },
+        "title": { "type": "string", "maxLength": 180 },
+        "detail": { "type": "string", "maxLength": 320 },
+        "relatedId": { "type": "string", "maxLength": 128 },
+        "dateIso": { "type": "string", "maxLength": 16 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "ownerId", "rewardKey", "actionKind", "points", "title", "detail", "relatedId", "dateIso", "createdAt"]
+    },
+    "DailyActivity": {
+      "title": "DailyActivity",
+      "description": "Daily learning stats & streak activity bucket keyed by YYYY-MM-DD.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 10, "maxLength": 10 },
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "dateIso": { "type": "string", "minLength": 10, "maxLength": 10 },
+        "minutesLearned": { "type": "integer" },
+        "videosWatched": { "type": "integer" },
+        "lessonsCompleted": { "type": "integer" },
+        "tasksCompleted": { "type": "integer" },
+        "quizzesCompleted": { "type": "integer" },
+        "reviewsCompleted": { "type": "integer" },
+        "xpEarned": { "type": "integer" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "id", "ownerId", "dateIso", "minutesLearned", "videosWatched", "lessonsCompleted",
+        "tasksCompleted", "quizzesCompleted", "reviewsCompleted", "xpEarned", "updatedAt"
+      ]
+    },
+    "SkillNode": {
+      "title": "SkillNode",
+      "description": "Interactive node in the user's Skill Tree with prerequisite links and live progress bindings.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 160 },
+        "description": { "type": "string", "maxLength": 600 },
+        "levelNumber": { "type": "integer" },
+        "columnIndex": { "type": "integer" },
+        "category": { "type": "string", "maxLength": 80 },
+        "prerequisiteIds": { "type": "array" },
+        "linkedPathIds": { "type": "array" },
+        "linkedCourseIds": { "type": "array" },
+        "linkedProjectIds": { "type": "array" },
+        "xpReward": { "type": "integer" },
+        "isCustom": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "id", "ownerId", "title", "description", "levelNumber", "columnIndex", "category",
+        "prerequisiteIds", "linkedPathIds", "linkedCourseIds", "linkedProjectIds",
+        "xpReward", "isCustom", "createdAt", "updatedAt"
+      ]
+    },
+    "LessonQuiz": {
+      "title": "LessonQuiz",
+      "description": "Interactive MCQ and True/False quiz tied to a video lesson.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "stepId": { "type": "string", "maxLength": 128 },
+        "pathId": { "type": "string", "maxLength": 128 },
+        "stepTitle": { "type": "string", "maxLength": 200 },
+        "title": { "type": "string", "maxLength": 200 },
+        "passPercent": { "type": "integer" },
+        "source": { "type": "string", "enum": ["ai", "manual"] },
+        "questions": { "type": "array" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "ownerId", "stepId", "pathId", "stepTitle", "title", "passPercent", "source", "questions", "createdAt", "updatedAt"]
+    },
+    "QuizAttempt": {
+      "title": "QuizAttempt",
+      "description": "Immutable record of a learner's quiz submission and score.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "quizId": { "type": "string", "maxLength": 128 },
+        "stepId": { "type": "string", "maxLength": 128 },
+        "pathId": { "type": "string", "maxLength": 128 },
+        "stepTitle": { "type": "string", "maxLength": 200 },
+        "quizTitle": { "type": "string", "maxLength": 200 },
+        "score": { "type": "integer" },
+        "totalQuestions": { "type": "integer" },
+        "percentage": { "type": "integer" },
+        "passed": { "type": "boolean" },
+        "results": { "type": "array" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "ownerId", "quizId", "stepId", "pathId", "stepTitle", "quizTitle", "score", "totalQuestions", "percentage", "passed", "results", "createdAt"]
+    },
+    "ReviewItem": {
+      "title": "ReviewItem",
+      "description": "Smart Review queue item capturing missed quiz questions for targeted mastery.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "questionId": { "type": "string", "maxLength": 128 },
+        "quizId": { "type": "string", "maxLength": 128 },
+        "stepId": { "type": "string", "maxLength": 128 },
+        "pathId": { "type": "string", "maxLength": 128 },
+        "stepTitle": { "type": "string", "maxLength": 200 },
+        "prompt": { "type": "string", "maxLength": 420 },
+        "options": { "type": "array" },
+        "correctIndex": { "type": "integer" },
+        "explanation": { "type": "string", "maxLength": 520 },
+        "wrongCount": { "type": "integer" },
+        "correctCount": { "type": "integer" },
+        "mastered": { "type": "boolean" },
+        "lastWrongAt": { "type": "string", "maxLength": 64 },
+        "lastReviewedAt": { "type": "string", "maxLength": 64 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "id", "ownerId", "questionId", "quizId", "stepId", "pathId", "stepTitle",
+        "prompt", "options", "correctIndex", "explanation", "wrongCount", "correctCount",
+        "mastered", "lastWrongAt", "lastReviewedAt", "updatedAt"
+      ]
+    },
+    "CertificateRecord": {
+      "title": "CertificateRecord",
+      "description": "Official achievement certificate auto-issued strictly at 100% completion of a learning path.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "pathId": { "type": "string", "maxLength": 128 },
+        "pathTitle": { "type": "string", "maxLength": 200 },
+        "recipientName": { "type": "string", "maxLength": 140 },
+        "verificationCode": { "type": "string", "maxLength": 40 },
+        "lessonsCount": { "type": "integer" },
+        "totalHoursLabel": { "type": "string", "maxLength": 60 },
+        "completedAt": { "type": "string", "maxLength": 32 },
+        "issuedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "ownerId", "pathId", "pathTitle", "recipientName", "verificationCode", "lessonsCount", "totalHoursLabel", "completedAt", "issuedAt"]
+    },
+    "FavoriteItem": {
+      "title": "FavoriteItem",
+      "description": "Bookmarked lesson, learning path, course, or collection video.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "targetType": { "type": "string", "enum": ["video_step", "learning_path", "course", "collection_video"] },
+        "targetId": { "type": "string", "maxLength": 128 },
+        "parentId": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 200 },
+        "subtitle": { "type": "string", "maxLength": 200 },
+        "url": { "type": "string", "maxLength": 2048 },
+        "thumbnailUrl": { "type": "string", "maxLength": 350000 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "ownerId", "targetType", "targetId", "parentId", "title", "subtitle", "url", "thumbnailUrl", "createdAt"]
+    },
+    "PracticalProject": {
+      "title": "PracticalProject",
+      "description": "Hands-on project linked to learning paths with interactive stages, requirements, and uploaded deliverables.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 180 },
+        "description": { "type": "string", "maxLength": 1500 },
+        "requirements": { "type": "string", "maxLength": 2000 },
+        "requiredSkills": { "type": "array" },
+        "linkedPathId": { "type": "string", "maxLength": 128 },
+        "linkedPathTitle": { "type": "string", "maxLength": 180 },
+        "status": { "type": "string", "enum": ["not_started", "in_progress", "completed"] },
+        "stages": { "type": "array" },
+        "files": { "type": "array" },
+        "totalSizeBytes": { "type": "integer" },
+        "projectUrl": { "type": "string", "maxLength": 2048 },
+        "xpReward": { "type": "integer" },
+        "completedAt": { "type": "string", "maxLength": 64 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "id", "ownerId", "title", "description", "requirements", "requiredSkills",
+        "linkedPathId", "linkedPathTitle", "status", "stages", "files", "totalSizeBytes",
+        "projectUrl", "xpReward", "completedAt", "createdAt", "updatedAt"
+      ]
+    },
+    "PlatformNotification": {
+      "title": "PlatformNotification",
+      "description": "In-app notification entry for XP, level-up, badge, streak, quiz, certificate, or project events.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "kind": { "type": "string", "enum": ["xp", "level_up", "badge", "streak", "quiz", "project", "certificate", "leaderboard"] },
+        "title": { "type": "string", "maxLength": 160 },
+        "message": { "type": "string", "maxLength": 400 },
+        "read": { "type": "boolean" },
+        "targetSection": { "type": "string", "maxLength": 40 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "ownerId", "kind", "title", "message", "read", "targetSection", "createdAt"]
+    },
+    "LeaderboardEntry": {
+      "title": "LeaderboardEntry",
+      "description": "Public leaderboard ranking row (strictly zero PII).",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "displayName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "username": { "type": "string", "maxLength": 40 },
+        "avatarLetter": { "type": "string", "maxLength": 4 },
+        "level": { "type": "integer" },
+        "totalXp": { "type": "integer" },
+        "weeklyXp": { "type": "integer" },
+        "monthlyXp": { "type": "integer" },
+        "weekKey": { "type": "string", "maxLength": 16 },
+        "monthKey": { "type": "string", "maxLength": 16 },
+        "currentStreak": { "type": "integer" },
+        "badgesCount": { "type": "integer" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "uid", "displayName", "username", "avatarLetter", "level", "totalXp",
+        "weeklyXp", "monthlyXp", "weekKey", "monthKey", "currentStreak", "badgesCount", "updatedAt"
+      ]
+    },
+    "CertificateVerification": {
+      "title": "CertificateVerification",
+      "description": "Non-PII verification record enabling lookup by verification code.",
+      "type": "object",
+      "properties": {
+        "verificationCode": { "type": "string", "maxLength": 40 },
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "recipientName": { "type": "string", "maxLength": 140 },
+        "pathTitle": { "type": "string", "maxLength": 200 },
+        "lessonsCount": { "type": "integer" },
+        "completedAt": { "type": "string", "maxLength": 32 },
+        "issuedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["verificationCode", "ownerId", "recipientName", "pathTitle", "lessonsCount", "completedAt", "issuedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/paths/{pathId}": {
+      "schema": { "$ref": "#/entities/LearningPath" },
+      "description": "Personalized learning paths owned by a specific authenticated user."
+    },
+    "/users/{userId}/paths/{pathId}/steps/{stepId}": {
+      "schema": { "$ref": "#/entities/VideoStep" },
+      "description": "Ordered video steps belonging to a user's learning path."
+    },
+    "/users/{userId}/vaultProjects/{projectId}": {
+      "schema": { "$ref": "#/entities/VaultProject" },
+      "description": "Backed-up project entries owned by an authenticated user."
+    },
+    "/users/{userId}/vaultProjects/{projectId}/versions/{versionId}": {
+      "schema": { "$ref": "#/entities/VaultVersion" },
+      "description": "Versioned backup snapshots belonging to a specific VaultProject."
+    },
+    "/users/{userId}/libraryAssets/{assetId}": {
+      "schema": { "$ref": "#/entities/LibraryAsset" },
+      "description": "Creative assets, 3D models, PBR materials, textures, and add-ons owned by an authenticated user."
+    },
+    "/users/{userId}/notes/{noteId}": {
+      "schema": { "$ref": "#/entities/WorkspaceNote" },
+      "description": "Rich personal notes owned by an authenticated user with optional cross-feature references."
+    },
+    "/users/{userId}/todos/{todoId}": {
+      "schema": { "$ref": "#/entities/TodoTask" },
+      "description": "Personal tasks owned by an authenticated user."
+    },
+    "/users/{userId}/courses/{courseId}": {
+      "schema": { "$ref": "#/entities/CourseItem" },
+      "description": "Saved and followed courses owned by an authenticated user."
+    },
+    "/users/{userId}/learningBoards/{boardId}": {
+      "schema": { "$ref": "#/entities/LearningBoard" },
+      "description": "Interactive Learning Board canvases owned by an authenticated user."
+    },
+    "/users/{userId}/savedGameJams/{jamId}": {
+      "schema": { "$ref": "#/entities/SavedGameJam" },
+      "description": "Saved Game Jams tracked by an authenticated user."
+    },
+    "/users/{userId}/videoCollections/{collectionId}": {
+      "schema": { "$ref": "#/entities/VideoCollection" },
+      "description": "Unified multi-platform video collections owned by an authenticated user."
+    },
+    "/users/{userId}/calendarEvents/{eventId}": {
+      "schema": { "$ref": "#/entities/CalendarEvent" },
+      "description": "Calendar events and reminders owned by an authenticated user."
+    },
+    "/users/{userId}/friends/{friendId}": {
+      "schema": { "$ref": "#/entities/FriendContact" },
+      "description": "Saved friends list for sharing inside the platform."
+    },
+    "/users/{userId}/fileBlobs/{blobId}": {
+      "schema": { "$ref": "#/entities/StoredFileMeta" },
+      "description": "Uploaded binary file metadata headers owned by an authenticated user."
+    },
+    "/users/{userId}/fileBlobs/{blobId}/chunks/{chunkId}": {
+      "schema": { "$ref": "#/entities/StoredFileChunk" },
+      "description": "Binary data slices belonging to a StoredFileMeta document."
+    },
+    "/users/{userId}/gamification/{docId}": {
+      "schema": { "$ref": "#/entities/GamificationProfile" },
+      "description": "User XP, Level, Streaks, and Badges summary."
+    },
+    "/users/{userId}/xpTransactions/{txId}": {
+      "schema": { "$ref": "#/entities/XpTransaction" },
+      "description": "Immutable idempotent XP ledger."
+    },
+    "/users/{userId}/dailyActivities/{dateIso}": {
+      "schema": { "$ref": "#/entities/DailyActivity" },
+      "description": "Daily learning minutes and completed actions per YYYY-MM-DD."
+    },
+    "/users/{userId}/skills/{skillId}": {
+      "schema": { "$ref": "#/entities/SkillNode" },
+      "description": "Visual Skill Tree nodes and links."
+    },
+    "/users/{userId}/quizzes/{quizId}": {
+      "schema": { "$ref": "#/entities/LessonQuiz" },
+      "description": "Interactive quizzes linked to video lessons."
+    },
+    "/users/{userId}/quizAttempts/{attemptId}": {
+      "schema": { "$ref": "#/entities/QuizAttempt" },
+      "description": "Quiz submission attempts."
+    },
+    "/users/{userId}/reviewItems/{reviewId}": {
+      "schema": { "$ref": "#/entities/ReviewItem" },
+      "description": "Smart Review missed quiz questions queue."
+    },
+    "/users/{userId}/certificates/{certId}": {
+      "schema": { "$ref": "#/entities/CertificateRecord" },
+      "description": "Achievement certificates earned on 100% path completion."
+    },
+    "/users/{userId}/favorites/{favId}": {
+      "schema": { "$ref": "#/entities/FavoriteItem" },
+      "description": "Bookmarked lessons, paths, courses, and collection videos."
+    },
+    "/users/{userId}/practicalProjects/{projectId}": {
+      "schema": { "$ref": "#/entities/PracticalProject" },
+      "description": "Practical projects with interactive stages and uploaded deliverables."
+    },
+    "/users/{userId}/notifications/{notifId}": {
+      "schema": { "$ref": "#/entities/PlatformNotification" },
+      "description": "Platform achievement & progress notifications."
+    },
+    "/publicProfiles/{userId}": {
+      "schema": { "$ref": "#/entities/UserPublicProfile" },
+      "description": "Public username & display name lookup documents (strictly no PII)."
+    },
+    "/usernames/{usernameLower}": {
+      "schema": { "$ref": "#/entities/UsernameClaim" },
+      "description": "Exact lowercase username index pointing to UID."
+    },
+    "/shares/{shareId}": {
+      "schema": { "$ref": "#/entities/SharedItem" },
+      "description": "Scoped shared items and invite links between users."
+    },
+    "/leaderboard/{userId}": {
+      "schema": { "$ref": "#/entities/LeaderboardEntry" },
+      "description": "Public leaderboard rankings without PII."
+    },
+    "/certificateVerifications/{verificationCode}": {
+      "schema": { "$ref": "#/entities/CertificateVerification" },
+      "description": "Public verification code lookup records without PII."
+    }
+  }
+}

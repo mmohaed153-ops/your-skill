@@ -1,0 +1,8 @@
+{
+  "name": "Remix مسار التعلم بالفيديو — منصة المسار",
+  "description": "مسار تعلم شخصي تفاعلي لمتابعة الفيديوهات التعليمية خطوة بخطوة مع حفظ التقدم والترتيب.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
